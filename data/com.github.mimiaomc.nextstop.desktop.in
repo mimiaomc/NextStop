@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=NextStop
+Exec=nextstop
+Icon=com.github.mimiaomc.nextstop
+Terminal=false
+Type=Application
+Categories=Utility;
+Keywords=GTK;
+StartupNotify=true
+DBusActivatable=true

@@ -1,0 +1,446 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <requires lib="Adw" version="1.0"/>
+  <template class="NextstopWindow" parent="AdwApplicationWindow">
+    <property name="title" translatable="yes">NextStop - 通用报站模拟器</property>
+    <property name="default-width">860</property>
+    <property name="default-height">720</property>
+    <property name="content">
+      <object class="AdwToolbarView">
+        <child type="top">
+          <object class="AdwHeaderBar">
+            <child type="start">
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">6</property>
+                <child>
+                  <object class="GtkDropDown" id="pack_dropdown">
+                    <property name="tooltip-text" translatable="yes">切换报站语音包（适配不同城市/系统）</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="refresh_pack_btn">
+                    <property name="icon-name">view-refresh-symbolic</property>
+                    <property name="tooltip-text" translatable="yes">热刷新素材库（识别新剪辑的音频与配置）</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <property name="title-widget">
+              <object class="AdwViewSwitcherTitle" id="switcher_title">
+                <property name="stack">view_stack</property>
+                <property name="title" translatable="yes">NextStop 报站器</property>
+              </object>
+            </property>
+            <child type="end">
+              <object class="GtkMenuButton">
+                <property name="primary">True</property>
+                <property name="icon-name">open-menu-symbolic</property>
+                <property name="tooltip-text" translatable="yes">主菜单</property>
+                <property name="menu-model">primary_menu</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <property name="content">
+          <object class="AdwToastOverlay" id="toast_overlay">
+            <property name="child">
+              <object class="AdwViewStack" id="view_stack">
+
+                <!-- 页面 1: 日常报站 -->
+                <child>
+                  <object class="AdwViewStackPage">
+                    <property name="name">daily</property>
+                    <property name="title" translatable="yes">日常报站</property>
+                    <property name="icon-name">mark-location-symbolic</property>
+                    <property name="child">
+                      <object class="AdwPreferencesPage">
+                        <child>
+                          <object class="AdwPreferencesGroup" id="depart_group">
+                            <property name="title" translatable="yes">出站 / 下一站广播</property>
+                            <property name="description" translatable="yes">起步提醒、下一站预告、换乘与站点专属插播</property>
+                            <child>
+                              <object class="AdwEntryRow" id="depart_station_entry">
+                                <property name="title" translatable="yes">下一站站名</property>
+                                <property name="text">小寨站</property>
+                                <child type="suffix">
+                                  <object class="GtkDropDown" id="depart_station_dropdown">
+                                    <property name="valign">center</property>
+                                    <property name="tooltip-text" translatable="yes">从素材库选已有站点填入</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="AdwEntryRow" id="depart_intro_entry">
+                                <property name="title" translatable="yes">站点特色介绍（可选）</property>
+                                <property name="text"></property>
+                                <child type="suffix">
+                                  <object class="GtkButton" id="depart_intro_clear_btn">
+                                    <property name="valign">center</property>
+                                    <property name="icon-name">edit-clear-symbolic</property>
+                                    <property name="tooltip-text" translatable="yes">清空（不插播站点介绍）</property>
+                                    <style>
+                                      <class name="flat"/>
+                                    </style>
+                                  </object>
+                                </child>
+                                <child type="suffix">
+                                  <object class="GtkDropDown" id="depart_intro_dropdown">
+                                    <property name="valign">center</property>
+                                    <property name="tooltip-text" translatable="yes">从素材库选已有介绍填入</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="AdwExpanderRow" id="depart_transfer_expander">
+                                <property name="title" translatable="yes">地铁换乘（支持多选）</property>
+                                <property name="subtitle" translatable="yes">无换乘</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="AdwPreferencesGroup" id="arrive_group">
+                            <property name="title" translatable="yes">进站 / 到站广播</property>
+                            <property name="description" translatable="yes">到站提示音、商业广告与后门下车台阶提醒</property>
+                            <child>
+                              <object class="AdwEntryRow" id="arrive_station_entry">
+                                <property name="title" translatable="yes">到达站点</property>
+                                <property name="text">小寨站</property>
+                                <child type="suffix">
+                                  <object class="GtkButton" id="arrive_sync_btn">
+                                    <property name="valign">center</property>
+                                    <property name="icon-name">edit-copy-symbolic</property>
+                                    <property name="tooltip-text" translatable="yes">同出站下一站（一键复制出站站名）</property>
+                                    <style>
+                                      <class name="flat"/>
+                                    </style>
+                                  </object>
+                                </child>
+                                <child type="suffix">
+                                  <object class="GtkDropDown" id="arrive_station_dropdown">
+                                    <property name="valign">center</property>
+                                    <property name="tooltip-text" translatable="yes">从素材库选已有站点填入</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="AdwComboRow" id="arrive_chime_row">
+                                <property name="title" translatable="yes">进站提示音</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="AdwComboRow" id="arrive_ad_row">
+                                <property name="title" translatable="yes">商业广告</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="AdwPreferencesGroup" id="outside_group">
+                            <property name="title" translatable="yes">车外进站广播（外报）</property>
+                            <property name="description" translatable="yes">车外顶置扬声器广播：进站安全提醒、当前运行线路与开往方向</property>
+                            <child>
+                              <object class="AdwEntryRow" id="outside_line_entry">
+                                <property name="title" translatable="yes">运行线路</property>
+                                <property name="text">333 路无人售票车</property>
+                                <child type="suffix">
+                                  <object class="GtkDropDown" id="outside_line_dropdown">
+                                    <property name="valign">center</property>
+                                    <property name="tooltip-text" translatable="yes">从素材库选已有线路填入</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="AdwEntryRow" id="outside_dest_entry">
+                                <property name="title" translatable="yes">开往终点站</property>
+                                <property name="text">城南公交枢纽站</property>
+                                <child type="suffix">
+                                  <object class="GtkDropDown" id="outside_dest_dropdown">
+                                    <property name="valign">center</property>
+                                    <property name="tooltip-text" translatable="yes">从素材库选已有站点填入</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="AdwActionRow">
+                                <property name="title" translatable="yes">播放车外进站广播</property>
+                                <property name="subtitle" translatable="yes">车辆进站道沿等候 - 线路与开往方向 - 军人优抚及安全乘车须知</property>
+                                <child type="suffix">
+                                  <object class="GtkButton" id="outside_play_btn">
+                                    <property name="label" translatable="yes">播报外报</property>
+                                    <property name="icon-name">audio-volume-high-symbolic</property>
+                                    <property name="valign">center</property>
+                                    <style>
+                                      <class name="suggested-action"/>
+                                    </style>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+
+                <!-- 页面 2: 车型与特性（完全由 pack.json 动态生成） -->
+                <child>
+                  <object class="AdwViewStackPage">
+                    <property name="name">features</property>
+                    <property name="title" translatable="yes">车型与特性</property>
+                    <property name="icon-name">emblem-system-symbolic</property>
+                    <property name="child">
+                      <object class="AdwPreferencesPage">
+                        <child>
+                          <object class="AdwPreferencesGroup" id="global_switches_group">
+                            <property name="title" translatable="yes">车型与系统特性</property>
+                            <property name="description" translatable="yes">由当前语音包配置文件（pack.json）定义的全局播报开关</property>
+                          </object>
+                        </child>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+
+                <!-- 页面 3: 首末站与车外广播 -->
+                <child>
+                  <object class="AdwViewStackPage">
+                    <property name="name">special</property>
+                    <property name="title" translatable="yes">首末站与广播</property>
+                    <property name="icon-name">audio-speakers-symbolic</property>
+                    <property name="child">
+                      <object class="AdwPreferencesPage">
+                        <child>
+                          <object class="AdwPreferencesGroup">
+                            <property name="title" translatable="yes">始发站启程大广播</property>
+                            <property name="description" translatable="yes">全线运行介绍、欢迎词、起止站播报</property>
+                            <child>
+                              <object class="AdwComboRow" id="first_line_row">
+                                <property name="title" translatable="yes">运行线路</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="AdwComboRow" id="first_origin_row">
+                                <property name="title" translatable="yes">始发站</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="AdwComboRow" id="first_dest_row">
+                                <property name="title" translatable="yes">终点站</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="AdwActionRow">
+                                <property name="title" translatable="yes">播放始发站广播</property>
+                                <property name="subtitle" translatable="yes">启动扶好 - 欢迎乘坐 - 本车由始发站开往终点站</property>
+                                <child type="suffix">
+                                  <object class="GtkButton" id="first_play_btn">
+                                    <property name="label" translatable="yes">播报首站</property>
+                                    <property name="icon-name">media-playback-start-symbolic</property>
+                                    <property name="valign">center</property>
+                                    <style>
+                                      <class name="suggested-action"/>
+                                    </style>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="AdwPreferencesGroup">
+                            <property name="title" translatable="yes">终点站到站广播</property>
+                            <property name="description" translatable="yes">到达全程终点站仪式广播</property>
+                            <child>
+                              <object class="AdwComboRow" id="terminus_station_row">
+                                <property name="title" translatable="yes">终点站站名</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="AdwActionRow">
+                                <property name="title" translatable="yes">播放终点站到站</property>
+                                <property name="subtitle" translatable="yes">进站叮咚 - 终点站到了请下车，各位乘客再会</property>
+                                <child type="suffix">
+                                  <object class="GtkButton" id="terminus_play_btn">
+                                    <property name="label" translatable="yes">播报终点</property>
+                                    <property name="icon-name">media-playback-start-symbolic</property>
+                                    <property name="valign">center</property>
+                                    <style>
+                                      <class name="suggested-action"/>
+                                    </style>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="AdwPreferencesGroup" id="quick_clips_group">
+                            <property name="title" translatable="yes">单项快捷口令</property>
+                            <property name="description" translatable="yes">由当前语音包定义的单句即时广播</property>
+                          </object>
+                        </child>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+
+              </object>
+            </property>
+          </object>
+        </property>
+
+        <!-- 底部播放状态条（音乐播放器风格：带当前线路显示、暂停、跳过当前段、停止） -->
+        <child type="bottom">
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkSeparator"/>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">10</property>
+                <property name="margin-top">10</property>
+                <property name="margin-bottom">10</property>
+                <property name="margin-start">16</property>
+                <property name="margin-end">16</property>
+                <child>
+                  <object class="GtkButton" id="bottom_mute_btn">
+                    <property name="icon-name">audio-volume-high-symbolic</property>
+                    <property name="tooltip-text" translatable="yes">静音 / 取消静音</property>
+                    <property name="valign">center</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="hexpand">True</property>
+                    <property name="spacing">4</property>
+                    <property name="valign">center</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">12</property>
+                        <child>
+                          <object class="GtkLabel" id="bottom_title_label">
+                            <property name="label" translatable="yes">空闲就绪</property>
+                            <property name="halign">start</property>
+                            <property name="hexpand">True</property>
+                            <property name="ellipsize">end</property>
+                            <style>
+                              <class name="heading"/>
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="bottom_route_label">
+                            <property name="label" translatable="yes">当前线路：333 路无人售票车 · 开往 城南公交枢纽站</property>
+                            <property name="halign">end</property>
+                            <property name="ellipsize">end</property>
+                            <style>
+                              <class name="dim-label"/>
+                              <class name="caption"/>
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="bottom_counter_label">
+                            <property name="label"></property>
+                            <property name="halign">end</property>
+                            <style>
+                              <class name="dim-label"/>
+                              <class name="caption"/>
+                            </style>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="bottom_subtitle_label">
+                        <property name="label" translatable="yes">在上方选择报站内容后点击播放</property>
+                        <property name="halign">start</property>
+                        <property name="ellipsize">end</property>
+                        <style>
+                          <class name="dim-label"/>
+                        </style>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkProgressBar" id="bottom_progress">
+                        <property name="fraction">0.0</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="bottom_pause_btn">
+                    <property name="icon-name">media-playback-pause-symbolic</property>
+                    <property name="tooltip-text" translatable="yes">暂停 / 继续</property>
+                    <property name="sensitive">False</property>
+                    <property name="valign">center</property>
+                    <style>
+                      <class name="circular"/>
+                    </style>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="bottom_skip_btn">
+                    <property name="icon-name">media-skip-forward-symbolic</property>
+                    <property name="tooltip-text" translatable="yes">跳过当前片段（直接播下一段）</property>
+                    <property name="sensitive">False</property>
+                    <property name="valign">center</property>
+                    <style>
+                      <class name="circular"/>
+                    </style>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="bottom_stop_btn">
+                    <property name="icon-name">media-playback-stop-symbolic</property>
+                    <property name="tooltip-text" translatable="yes">停止播放</property>
+                    <property name="sensitive">False</property>
+                    <property name="valign">center</property>
+                    <style>
+                      <class name="circular"/>
+                      <class name="destructive-action"/>
+                    </style>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+
+      </object>
+    </property>
+  </template>
+  <menu id="primary_menu">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">首选项</attribute>
+        <attribute name="action">app.preferences</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">快捷键</attribute>
+        <attribute name="action">app.shortcuts</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">关于 NextStop</attribute>
+        <attribute name="action">app.about</attribute>
+      </item>
+    </section>
+  </menu>
+</interface>

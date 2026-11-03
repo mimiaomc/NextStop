@@ -1,0 +1,24 @@
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Meson & Flatpak 构建缓存
+_build/
+build/
+builddir/
+.flatpak/
+.flatpak-builder/
+.flatpak-builder-cache/
+.ninja_log
+.ninja_deps
+compile_commands.json
+
+# IDE 与编辑器临时文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store

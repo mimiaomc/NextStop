@@ -1,0 +1,40 @@
+{
+    "id" : "com.github.mimiaomc.nextstop",
+    "runtime" : "org.gnome.Platform",
+    "runtime-version" : "50",
+    "sdk" : "org.gnome.Sdk",
+    "command" : "nextstop",
+    "finish-args" : [
+        "--share=ipc",
+        "--socket=fallback-x11",
+        "--device=dri",
+        "--socket=wayland",
+        "--socket=pulseaudio",
+        "--filesystem=xdg-run/pipewire-0",
+        "--talk-name=org.freedesktop.Flatpak"
+    ],
+    "cleanup" : [
+        "/include",
+        "/lib/pkgconfig",
+        "/man",
+        "/share/doc",
+        "/share/gtk-doc",
+        "/share/man",
+        "/share/pkgconfig",
+        "*.la",
+        "*.a"
+    ],
+    "modules" : [
+        {
+            "name" : "nextstop",
+            "builddir" : true,
+            "buildsystem" : "meson",
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "file:///var/home/miaolege/Projects/NextStop"
+                }
+            ]
+        }
+    ]
+}

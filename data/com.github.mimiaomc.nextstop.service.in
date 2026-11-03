@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=com.github.mimiaomc.nextstop
+Exec=@bindir@/nextstop --gapplication-service
