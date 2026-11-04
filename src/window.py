@@ -7,7 +7,8 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
-from gi.repository import Adw, Gtk, GLib
+from gettext import gettext as _
+from gi.repository import Adw, Gtk, GLib, Gio
 from .engine import PackManager, AudioPlayer, AudioSegment
 
 
@@ -17,10 +18,17 @@ class NextstopWindow(Adw.ApplicationWindow):
 
     # 顶栏与主容器
     pack_dropdown = Gtk.Template.Child()
+    import_pack_btn = Gtk.Template.Child()
     refresh_pack_btn = Gtk.Template.Child()
     switcher_title = Gtk.Template.Child()
+    main_stack = Gtk.Template.Child()
     view_stack = Gtk.Template.Child()
     toast_overlay = Gtk.Template.Child()
+
+    # 空状态页
+    empty_status_page = Gtk.Template.Child()
+    empty_import_btn = Gtk.Template.Child()
+    empty_open_folder_btn = Gtk.Template.Child()
 
     # 出站 / 下一站
     depart_group = Gtk.Template.Child()
@@ -61,6 +69,7 @@ class NextstopWindow(Adw.ApplicationWindow):
     terminus_play_btn = Gtk.Template.Child()
 
     # 底栏播放器
+    bottom_player_bar = Gtk.Template.Child()
     bottom_mute_btn = Gtk.Template.Child()
     bottom_title_label = Gtk.Template.Child()
     bottom_route_label = Gtk.Template.Child()
@@ -90,9 +99,20 @@ class NextstopWindow(Adw.ApplicationWindow):
         self._updating_packs = False
         self._syncing_route = False
 
+        self._setup_actions()
         self._setup_signals()
         self._populate_pack_dropdown()
         self._rebuild_pack_ui()
+
+    def _setup_actions(self):
+        for act_name, callback in [
+            ("import_pack", self._on_import_pack_clicked),
+            ("open_packs_dir", self._on_open_packs_dir_clicked),
+            ("delete_pack", self._on_delete_pack_clicked),
+        ]:
+            action = Gio.SimpleAction.new(act_name, None)
+            action.connect("activate", callback)
+            self.add_action(action)
 
     def _get_row_selected_text(self, row: Adw.ComboRow) -> str:
         idx = row.get_selected()
@@ -103,13 +123,17 @@ class NextstopWindow(Adw.ApplicationWindow):
 
     def _populate_pack_dropdown(self):
         self._updating_packs = True
-        pack_names = [p.name for p in self.pack_manager.available_packs] or ["西安公交（标准版）"]
-        self.pack_dropdown.set_model(Gtk.StringList.new(pack_names))
-        if self.pack_manager.current_pack:
-            for i, p in enumerate(self.pack_manager.available_packs):
-                if p.id == self.pack_manager.current_pack.id:
-                    self.pack_dropdown.set_selected(i)
-                    break
+        if self.pack_manager.available_packs:
+            pack_names = [p.name for p in self.pack_manager.available_packs]
+            self.pack_dropdown.set_model(Gtk.StringList.new(pack_names))
+            if self.pack_manager.current_pack:
+                for i, p in enumerate(self.pack_manager.available_packs):
+                    if p.id == self.pack_manager.current_pack.id:
+                        self.pack_dropdown.set_selected(i)
+                        break
+        else:
+            self.pack_dropdown.set_model(Gtk.StringList.new([_("No pack imported")]))
+            self.pack_dropdown.set_selected(0)
         self._updating_packs = False
 
     def _clear_dynamic_rows(self):
@@ -140,8 +164,18 @@ class NextstopWindow(Adw.ApplicationWindow):
         """根据当前 pack.json 动态构建所有下拉菜单、特性开关、站点触发行与快捷口令"""
         self._clear_dynamic_rows()
 
-        stations = self.pack_manager.stations or ["小寨站"]
-        picker_items = ["选素材库已有站点..."] + stations
+        has_packs = bool(self.pack_manager.available_packs and self.pack_manager.current_pack)
+        self.main_stack.set_visible_child_name("content" if has_packs else "empty")
+        self.switcher_title.set_view_switcher_enabled(has_packs)
+        self.switcher_title.set_title(_("NextStop Broadcaster") if has_packs else "NextStop")
+        self.pack_dropdown.set_sensitive(has_packs)
+        self.bottom_player_bar.set_visible(has_packs)
+
+        if not has_packs:
+            return
+
+        stations = self.pack_manager.stations or []
+        picker_items = [_("Select from library...")] + stations
         self.depart_station_dropdown.set_model(Gtk.StringList.new(picker_items))
         self.arrive_station_dropdown.set_model(Gtk.StringList.new(picker_items))
         self.outside_dest_dropdown.set_model(Gtk.StringList.new(picker_items))
@@ -150,7 +184,7 @@ class NextstopWindow(Adw.ApplicationWindow):
         self.outside_dest_dropdown.set_selected(0)
 
         intros = self.pack_manager.intros or []
-        intro_picker_items = ["选已有介绍...", "不插播介绍"] + intros
+        intro_picker_items = [_("Select from library..."), _("No intro")] + intros
         self.depart_intro_dropdown.set_model(Gtk.StringList.new(intro_picker_items))
         self.depart_intro_dropdown.set_selected(0)
         self.depart_intro_entry.set_text("")
@@ -160,7 +194,7 @@ class NextstopWindow(Adw.ApplicationWindow):
         self.terminus_station_row.set_model(Gtk.StringList.new(stations))
 
         # 构建换乘线路多选开关
-        transfer_list = [t for t in self.pack_manager.transfers if t and t != "无换乘"]
+        transfer_list = [t for t in self.pack_manager.transfers if t and t not in (_("No transfer"), "无换乘")]
         for line_name in transfer_list:
             row = Adw.SwitchRow(title=line_name, active=False)
             row.connect("notify::active", self._on_transfer_switch_toggled)
@@ -174,40 +208,42 @@ class NextstopWindow(Adw.ApplicationWindow):
 
         self.arrive_ad_row.set_model(Gtk.StringList.new(self.pack_manager.ads))
 
-        lines = self.pack_manager.lines or ["333 路无人售票车"]
-        line_picker_items = ["选已有线路..."] + lines
+        lines = self.pack_manager.lines or []
+        line_picker_items = [_("Select from library...")] + lines
         self.outside_line_dropdown.set_model(Gtk.StringList.new(line_picker_items))
         self.outside_line_dropdown.set_selected(0)
         self.first_line_row.set_model(Gtk.StringList.new(lines))
 
         # 读取 pack.json 默认值
         defaults = self.pack_manager.config.get("defaults", {})
-        def_station = defaults.get("station", "小寨")
-        def_origin = defaults.get("origin", "西北工业大学")
-        def_dest = defaults.get("destination", "城南公交枢纽")
-        def_line = defaults.get("line", "333")
+        def_station = defaults.get("station") or (stations[0] if stations else "")
+        def_origin = defaults.get("origin") or (stations[0] if stations else "")
+        def_dest = defaults.get("destination") or (stations[-1] if len(stations) > 1 else (stations[0] if stations else ""))
+        def_line = defaults.get("line") or (lines[0] if lines else "")
 
         self._syncing_route = True
+        self.depart_station_entry.set_text(def_station)
+        self.arrive_station_entry.set_text(def_station)
+        self.outside_dest_entry.set_text(def_dest)
+        self.outside_line_entry.set_text(def_line)
+
         for i, s in enumerate(stations):
-            if def_station in s:
-                self.depart_station_entry.set_text(s)
-                self.arrive_station_entry.set_text(s)
-            if def_origin in s:
+            if def_origin and (def_origin == s or def_origin in s):
                 self.first_origin_row.set_selected(i)
-            if def_dest in s:
-                self.outside_dest_entry.set_text(s)
+                break
+        for i, s in enumerate(stations):
+            if def_dest and (def_dest == s or def_dest in s):
                 self.first_dest_row.set_selected(i)
                 self.terminus_station_row.set_selected(i)
-
+                break
         for i, ln in enumerate(lines):
-            if def_line in ln:
-                self.outside_line_entry.set_text(ln)
+            if def_line and (def_line == ln or def_line in ln):
                 self.first_line_row.set_selected(i)
                 break
         self._syncing_route = False
         self._update_bottom_route_label()
 
-        # 1. 动态生成出站卡片开关（如：965 315 热线、爱上大西安、下一站是终点站）
+        # 1. 动态生成出站卡片开关
         for sw_cfg in self.pack_manager.get_switches(placement="depart"):
             row = Adw.SwitchRow(
                 title=sw_cfg.get("title", ""),
@@ -220,11 +256,11 @@ class NextstopWindow(Adw.ApplicationWindow):
 
         # 2. 出站与到站的播放主按钮行（始终置于各卡片底部）
         dep_action = Adw.ActionRow(
-            title="播放出站广播",
-            subtitle="按当前语音包规则拼装并播报出站语音队列",
+            title=_("Play Depart Broadcast"),
+            subtitle=_("Assemble and play departure audio queue according to pack rules"),
         )
         dep_btn = Gtk.Button(
-            label="播报起步",
+            label=_("Start Trip"),
             icon_name="media-playback-start-symbolic",
             valign=Gtk.Align.CENTER,
             css_classes=["suggested-action"],
@@ -246,11 +282,11 @@ class NextstopWindow(Adw.ApplicationWindow):
             self._switch_widgets[sw_cfg["id"]] = row
 
         arr_action = Adw.ActionRow(
-            title="播放到站广播",
-            subtitle="提示音 - 商业广告 - 到站 - 下车安全提醒",
+            title=_("Play Arrival Broadcast"),
+            subtitle=_("Chime - Commercial - Arrival - Safety reminder"),
         )
         arr_btn = Gtk.Button(
-            label="播报到站",
+            label=_("Arrive Stop"),
             icon_name="media-playback-start-symbolic",
             valign=Gtk.Align.CENTER,
             css_classes=["suggested-action"],
@@ -260,8 +296,9 @@ class NextstopWindow(Adw.ApplicationWindow):
         self.arrive_group.add(arr_action)
         self._dynamic_arrive_rows.append(arr_action)
 
-        # 4. 动态生成全局车型与特性开关（如双层巴士、响应式停靠、225路换乘尾音）
-        for sw_cfg in self.pack_manager.get_switches(placement="global"):
+        # 4. 动态生成全局车型与特性开关
+        global_switches = self.pack_manager.get_switches(placement="global")
+        for sw_cfg in global_switches:
             row = Adw.SwitchRow(
                 title=sw_cfg.get("title", ""),
                 subtitle=sw_cfg.get("subtitle", ""),
@@ -271,8 +308,18 @@ class NextstopWindow(Adw.ApplicationWindow):
             self._dynamic_global_rows.append(row)
             self._switch_widgets[sw_cfg["id"]] = row
 
+        if not global_switches:
+            empty_row = Adw.ActionRow(
+                title=_("No Global Feature Switches"),
+                subtitle=_("Current pack has no global vehicle or system switches configured"),
+                sensitive=False,
+            )
+            self.global_switches_group.add(empty_row)
+            self._dynamic_global_rows.append(empty_row)
+
         # 5. 动态生成单项快捷口令列表
-        for clip in self.pack_manager.get_quick_clips():
+        quick_clips = self.pack_manager.get_quick_clips()
+        for clip in quick_clips:
             title = clip.get("title", "")
             label = clip.get("label", title)
             rel_file = clip.get("file", "")
@@ -290,6 +337,15 @@ class NextstopWindow(Adw.ApplicationWindow):
             self.quick_clips_group.add(row)
             self._dynamic_quick_rows.append(row)
 
+        if not quick_clips:
+            empty_row = Adw.ActionRow(
+                title=_("No Quick Clips"),
+                subtitle=_("Current pack has no quick clips configured"),
+                sensitive=False,
+            )
+            self.quick_clips_group.add(empty_row)
+            self._dynamic_quick_rows.append(empty_row)
+
     def _setup_signals(self):
         """绑定按钮动作与播放器事件"""
         self.player.on_segment_start = self._on_segment_start
@@ -297,9 +353,14 @@ class NextstopWindow(Adw.ApplicationWindow):
         self.player.on_finished = self._on_playback_finished
         self.player.on_error = self._on_playback_error
 
-        # 顶栏语音包切换与热刷新
+        # 顶栏语音包切换、导入与热刷新
         self.pack_dropdown.connect("notify::selected", self._on_pack_selected)
+        self.import_pack_btn.connect("clicked", self._on_import_pack_clicked)
         self.refresh_pack_btn.connect("clicked", self._on_refresh_pack_clicked)
+
+        # 空状态页按钮
+        self.empty_import_btn.connect("clicked", self._on_import_pack_clicked)
+        self.empty_open_folder_btn.connect("clicked", self._on_open_packs_dir_clicked)
 
         # 站点输入框右侧快捷选站与同步按钮
         self.depart_station_dropdown.connect("notify::selected", self._on_depart_dropdown_selected)
@@ -335,13 +396,86 @@ class NextstopWindow(Adw.ApplicationWindow):
             pack = self.pack_manager.available_packs[idx]
             self.pack_manager.load_pack(pack.id)
             self._rebuild_pack_ui()
-            self._show_toast(f"已切换语音包：{pack.name}")
+            self._show_toast(_("Switched pack: {name}").format(name=pack.name))
+
+    def _on_import_pack_clicked(self, *args):
+        filter_zip = Gtk.FileFilter()
+        filter_zip.set_name(_("Announcement Pack (*.zip)"))
+        filter_zip.add_pattern("*.zip")
+        filter_zip.add_mime_type("application/zip")
+
+        dialog = Gtk.FileChooserNative.new(
+            title=_("Select Announcement Pack ZIP Archive"),
+            parent=self,
+            action=Gtk.FileChooserAction.OPEN,
+            accept_label=_("Import"),
+            cancel_label=_("Cancel"),
+        )
+        dialog.add_filter(filter_zip)
+        dialog.connect("response", self._on_import_dialog_response)
+        dialog.show()
+
+    def _on_import_dialog_response(self, dialog, response_id):
+        if response_id == Gtk.ResponseType.ACCEPT:
+            gfile = dialog.get_file()
+            if gfile:
+                path = gfile.get_path()
+                if path:
+                    success, pack_id, msg = self.pack_manager.import_zip_pack(path)
+                    if success:
+                        self._show_toast(msg)
+                        self._populate_pack_dropdown()
+                        self._rebuild_pack_ui()
+                    else:
+                        alert = Adw.MessageDialog.new(
+                            self,
+                            _("Import Failed"),
+                            msg,
+                        )
+                        alert.add_response("ok", _("OK"))
+                        alert.present()
+
+    def _on_open_packs_dir_clicked(self, *args):
+        packs_dir = self.pack_manager.get_user_packs_dir()
+        uri = GLib.filename_to_uri(packs_dir)
+        try:
+            Gio.AppInfo.launch_default_for_uri(uri, None)
+        except Exception as e:
+            self._show_toast(_("Failed to open directory: {err}").format(err=e))
+
+    def _on_delete_pack_clicked(self, *args):
+        cur = self.pack_manager.current_pack
+        if not cur:
+            self._show_toast(_("No pack loaded to delete"))
+            return
+
+        dialog = Adw.MessageDialog.new(
+            self,
+            _("Delete Announcement Pack?"),
+            _("Are you sure you want to delete pack \"{name}\" and all its audio files? This action cannot be undone.").format(name=cur.name),
+        )
+        dialog.add_response("cancel", _("Cancel"))
+        dialog.add_response("delete", _("Delete"))
+        dialog.set_response_appearance("delete", Adw.ResponseAppearance.DESTRUCTIVE)
+
+        def _on_response(_d, resp):
+            if resp == "delete":
+                ok, msg = self.pack_manager.delete_pack(cur.id)
+                self._show_toast(msg)
+                self._populate_pack_dropdown()
+                self._rebuild_pack_ui()
+
+        dialog.connect("response", _on_response)
+        dialog.present()
 
     def _on_refresh_pack_clicked(self, *args):
         self.pack_manager.reload_current_pack()
         self._populate_pack_dropdown()
         self._rebuild_pack_ui()
-        self._show_toast(f"已刷新素材库（共 {len(self.pack_manager.stations)} 个站点）")
+        if self.pack_manager.available_packs:
+            self._show_toast(_("Library refreshed ({n} stations)").format(n=len(self.pack_manager.stations)))
+        else:
+            self._show_toast(_("Library refreshed, no packs detected"))
 
     def _on_depart_dropdown_selected(self, *args):
         idx = self.depart_station_dropdown.get_selected()
@@ -425,9 +559,9 @@ class NextstopWindow(Adw.ApplicationWindow):
         self._update_bottom_route_label()
 
     def _update_bottom_route_label(self):
-        ln = self.outside_line_entry.get_text().strip() or self._get_row_selected_text(self.first_line_row) or "未设线路"
-        dest = self.outside_dest_entry.get_text().strip() or self._get_row_selected_text(self.first_dest_row) or "未设终点"
-        self.bottom_route_label.set_text(f"当前线路：{ln} · 开往 {dest}")
+        ln = self.outside_line_entry.get_text().strip() or self._get_row_selected_text(self.first_line_row) or _("Unset Route")
+        dest = self.outside_dest_entry.get_text().strip() or self._get_row_selected_text(self.first_dest_row) or _("Unset Destination")
+        self.bottom_route_label.set_text(_("Current Route: {line} · Bound for {dest}").format(line=ln, dest=dest))
 
     def _on_arrive_sync_clicked(self, *args):
         st = self.depart_station_entry.get_text().strip()
@@ -438,9 +572,9 @@ class NextstopWindow(Adw.ApplicationWindow):
             arr_term_row = self._switch_widgets.get("is_terminus_arrive")
             if next_term_row and arr_term_row and next_term_row.get_active():
                 arr_term_row.set_active(True)
-            self._show_toast(f"已同步到达站点：{st}")
+            self._show_toast(_("Synchronized arrival station: {name}").format(name=st))
         else:
-            self._show_toast("出站下一站目前为空")
+            self._show_toast(_("Next station field is currently empty"))
 
     def _on_transfer_switch_toggled(self, *args):
         self._update_transfer_expander_subtitle()
@@ -448,14 +582,14 @@ class NextstopWindow(Adw.ApplicationWindow):
     def _update_transfer_expander_subtitle(self):
         selected = [line for line, row in self._transfer_switch_widgets.items() if row.get_active()]
         if selected:
-            self.depart_transfer_expander.set_subtitle("换乘：" + "、".join(selected))
+            self.depart_transfer_expander.set_subtitle(_("Transfers: {list}").format(list=", ".join(selected)))
         else:
-            self.depart_transfer_expander.set_subtitle("无换乘")
+            self.depart_transfer_expander.set_subtitle(_("No transfer"))
 
     def _on_mute_clicked(self, *args):
         muted = self.player.toggle_mute()
         icon = "audio-volume-muted-symbolic" if muted else "audio-volume-high-symbolic"
-        tip = "取消静音" if muted else "静音"
+        tip = _("Unmute") if muted else _("Mute")
         self.bottom_mute_btn.set_icon_name(icon)
         self.bottom_mute_btn.set_tooltip_text(tip)
 
@@ -467,51 +601,51 @@ class NextstopWindow(Adw.ApplicationWindow):
         self.toast_overlay.add_toast(toast)
 
     def _show_station_not_found(self, station_name: str):
-        heading = "未收录该站点"
+        heading = _("Station Not Recorded")
         body = (
-            f"当前语音包中尚未收录「{station_name}」的报站录音。\n\n"
-            f"如果刚刚剪辑放入了音频，可点击左上角的刷新按钮重新加载！"
+            _("Audio recording for station \"{name}\" is not found in the current pack.\n\n"
+              "If you just added the audio file, click the Refresh button on the top left to reload!").format(name=station_name)
         )
         if hasattr(Adw, "AlertDialog"):
             dlg = Adw.AlertDialog(heading=heading, body=body)
-            dlg.add_response("ok", "知道了")
+            dlg.add_response("ok", _("OK"))
             dlg.present(self)
         elif hasattr(Adw, "MessageDialog"):
             dlg = Adw.MessageDialog(transient_for=self, heading=heading, body=body)
-            dlg.add_response("ok", "知道了")
+            dlg.add_response("ok", _("OK"))
             dlg.present()
         else:
-            self._show_toast(f"未收录站点：{station_name}")
+            self._show_toast(_("Station not recorded: {name}").format(name=station_name))
 
     def _show_line_not_found(self, line_name: str):
-        heading = "未收录该线路"
+        heading = _("Route Not Recorded")
         body = (
-            f"当前语音包中尚未收录「{line_name}」的线路名录音。\n\n"
-            f"如果刚刚剪辑放入了音频，可点击左上角的刷新按钮重新加载！"
+            _("Audio recording for route \"{name}\" is not found in the current pack.\n\n"
+              "If you just added the audio file, click the Refresh button on the top left to reload!").format(name=line_name)
         )
         if hasattr(Adw, "AlertDialog"):
             dlg = Adw.AlertDialog(heading=heading, body=body)
-            dlg.add_response("ok", "知道了")
+            dlg.add_response("ok", _("OK"))
             dlg.present(self)
         elif hasattr(Adw, "MessageDialog"):
             dlg = Adw.MessageDialog(transient_for=self, heading=heading, body=body)
-            dlg.add_response("ok", "知道了")
+            dlg.add_response("ok", _("OK"))
             dlg.present()
         else:
-            self._show_toast(f"未收录线路：{line_name}")
+            self._show_toast(_("Route not recorded: {name}").format(name=line_name))
 
     def _play_rel_single(self, label: str, rel_file: str, channel: str = "inside"):
         f = self.pack_manager.resolve_rel_file(rel_file)
         if not f:
-            self._show_toast(f"未找到音频：{rel_file}")
+            self._show_toast(_("Audio file not found: {file}").format(file=rel_file))
             return
-        self.player.play_queue(f"单段播报：{label}", [AudioSegment(label, f)], channel=channel)
+        self.player.play_queue(_("Single Broadcast: {label}").format(label=label), [AudioSegment(label, f)], channel=channel)
 
     def _on_depart_play(self, *args):
         st = self.depart_station_entry.get_text().strip()
         intro = self.depart_intro_entry.get_text().strip()
         if not st:
-            self._show_toast("请输入或选择下一站站名")
+            self._show_toast(_("Please enter or select the next station name"))
             return
 
         if not self.pack_manager.get_station_audio(st):
@@ -520,7 +654,7 @@ class NextstopWindow(Adw.ApplicationWindow):
 
         if intro and intro not in ("无", "无介绍", "不插播", "不插播介绍"):
             if not self.pack_manager.get_intro_audio(intro):
-                self._show_toast(f"未收录「{intro}」的站点介绍音频")
+                self._show_toast(_("Feature intro audio not recorded: {name}").format(name=intro))
                 return
 
         selected_transfers = [line for line, row in self._transfer_switch_widgets.items() if row.get_active()]
@@ -530,14 +664,14 @@ class NextstopWindow(Adw.ApplicationWindow):
             switch_states=self._collect_switch_states(),
         )
         if not segments:
-            self._show_toast("未找到可播放的音频切片")
+            self._show_toast(_("No playable audio segments found"))
             return
-        self.player.play_queue(f"出站预告：下一站 {st}", segments, channel="inside")
+        self.player.play_queue(_("Depart Alert: Next Station {name}").format(name=st), segments, channel="inside")
 
     def _on_arrive_play(self, *args):
         st = self.arrive_station_entry.get_text().strip()
         if not st:
-            self._show_toast("请输入或选择到达站点")
+            self._show_toast(_("Please enter or select the arrival station name"))
             return
 
         if not self.pack_manager.get_station_audio(st):
@@ -553,14 +687,14 @@ class NextstopWindow(Adw.ApplicationWindow):
             switch_states=self._collect_switch_states(),
         )
         if not segments:
-            self._show_toast("未找到可播放的音频切片")
+            self._show_toast(_("No playable audio segments found"))
             return
         is_term = bool(
             self._switch_widgets.get("is_terminus_arrive")
             and self._switch_widgets["is_terminus_arrive"].get_active()
         )
-        prefix = "终点站到达" if is_term else "进站广播"
-        self.player.play_queue(f"{prefix}：{st}", segments, channel="inside")
+        prefix = _("Terminus Arrival") if is_term else _("Arrival Broadcast")
+        self.player.play_queue(f"{prefix}: {st}", segments, channel="inside")
 
     def _on_first_play(self, *args):
         line = self._get_row_selected_text(self.first_line_row)
@@ -573,9 +707,9 @@ class NextstopWindow(Adw.ApplicationWindow):
             switch_states=self._collect_switch_states(),
         )
         if not segments:
-            self._show_toast("未找到可播放的音频切片")
+            self._show_toast(_("No playable audio segments found"))
             return
-        self.player.play_queue(f"始发站启程：{line}", segments, channel="inside")
+        self.player.play_queue(_("Origin Departure: {name}").format(name=line), segments, channel="inside")
 
     def _on_terminus_play(self, *args):
         st = self._get_row_selected_text(self.terminus_station_row)
@@ -587,23 +721,23 @@ class NextstopWindow(Adw.ApplicationWindow):
             switch_states=self._collect_switch_states(),
         )
         if not segments:
-            self._show_toast("未找到可播放的音频切片")
+            self._show_toast(_("No playable audio segments found"))
             return
-        self.player.play_queue(f"终点站到达：{st}", segments, channel="inside")
+        self.player.play_queue(_("Terminus Arrival: {name}").format(name=st), segments, channel="inside")
 
     def _on_outside_play(self, *args):
         line = self.outside_line_entry.get_text().strip()
         dest = self.outside_dest_entry.get_text().strip()
 
         if not line:
-            self._show_toast("请输入或选择当前运行线路")
+            self._show_toast(_("Please enter or select the operating line"))
             return
         if not self.pack_manager.get_line_audio(line):
             self._show_line_not_found(line)
             return
 
         if not dest:
-            self._show_toast("请输入或选择开往终点站")
+            self._show_toast(_("Please enter or select the destination station"))
             return
         if not self.pack_manager.get_station_audio(dest):
             self._show_station_not_found(dest)
@@ -615,53 +749,53 @@ class NextstopWindow(Adw.ApplicationWindow):
             switch_states=self._collect_switch_states(),
         )
         if not segments:
-            self._show_toast("未找到可播放的音频切片")
+            self._show_toast(_("No playable audio segments found"))
             return
-        self.player.play_queue(f"车外进站广播：{line}（开往 {dest}）", segments, channel="outside")
+        self.player.play_queue(_("Outside Arrival: {line} (Bound for {dest})").format(line=line, dest=dest), segments, channel="outside")
 
     def open_preferences_dialog(self):
         """打开首选项窗口（设置内报与外报输出扬声器）"""
         if hasattr(Adw, "PreferencesDialog"):
-            dlg = Adw.PreferencesDialog(title="首选项")
+            dlg = Adw.PreferencesDialog(title=_("Preferences"))
             is_dialog = True
         else:
-            dlg = Adw.PreferencesWindow(title="首选项", transient_for=self, modal=True)
+            dlg = Adw.PreferencesWindow(title=_("Preferences"), transient_for=self, modal=True)
             is_dialog = False
 
-        page = Adw.PreferencesPage(title="音频与扬声器", icon_name="audio-speakers-symbolic")
+        page = Adw.PreferencesPage(title=_("Audio & Speakers"), icon_name="audio-speakers-symbolic")
         audio_group = Adw.PreferencesGroup(
-            title="内外报扬声器通道分离",
-            description="可分别指定车内报站（内报）与车外进站广播（外报）的输出设备，实现车内与车外喇叭独立发声",
+            title=_("Speaker Output Routing"),
+            description=_("Assign distinct audio output devices for inside vehicle announcements and outside loudspeaker"),
         )
 
         inside_row = Adw.ComboRow(
-            title="车内广播扬声器（内报）",
-            subtitle="用于日常出站、到站、始发与终点站等车厢内广播",
+            title=_("Inside Vehicle Speaker"),
+            subtitle=_("Used for daily depart, arrive, origin and terminus broadcasts"),
         )
         inside_test_btn = Gtk.Button(
-            label="试听内报",
+            label=_("Test Inside"),
             icon_name="media-playback-start-symbolic",
             valign=Gtk.Align.CENTER,
         )
         inside_row.add_suffix(inside_test_btn)
 
         outside_row = Adw.ComboRow(
-            title="车外广播扬声器（外报）",
-            subtitle="用于车外进站广播（可外接蓝牙音箱或第二声卡模拟车外大喇叭）",
+            title=_("Outside Loudspeaker"),
+            subtitle=_("Used for external arrival broadcasts (connect an external Bluetooth speaker or secondary sound card)"),
         )
         outside_test_btn = Gtk.Button(
-            label="试听外报",
+            label=_("Test Outside"),
             icon_name="audio-volume-high-symbolic",
             valign=Gtk.Align.CENTER,
         )
         outside_row.add_suffix(outside_test_btn)
 
         refresh_row = Adw.ActionRow(
-            title="重新扫描音频设备",
-            subtitle="接入新的蓝牙音箱、耳机或 USB 声卡后点击刷新列表",
+            title=_("Rescan Audio Devices"),
+            subtitle=_("Click to reload list after connecting new Bluetooth speakers, headphones or USB audio"),
         )
         refresh_btn = Gtk.Button(
-            label="刷新列表",
+            label=_("Refresh"),
             icon_name="view-refresh-symbolic",
             valign=Gtk.Align.CENTER,
         )
@@ -711,10 +845,10 @@ class NextstopWindow(Adw.ApplicationWindow):
                 self.player.save_preferences()
 
         def _on_test_inside(*_args):
-            self._play_rel_single("内报扬声器测试", "站前广播/车辆启动，请扶好坐好", channel="inside")
+            self._play_rel_single(_("Inside Speaker Test"), "站前广播/车辆启动，请扶好坐好", channel="inside")
 
         def _on_test_outside(*_args):
-            self._play_rel_single("外报扬声器测试", "外报/车辆进站，请在道沿上等候，注意安全", channel="outside")
+            self._play_rel_single(_("Outside Speaker Test"), "外报/车辆进站，请在道沿上等候，注意安全", channel="outside")
 
         inside_row.connect("notify::selected", _on_inside_changed)
         outside_row.connect("notify::selected", _on_outside_changed)
@@ -732,9 +866,9 @@ class NextstopWindow(Adw.ApplicationWindow):
     # 播放器回调
     def _on_segment_start(self, title: str, idx: int, total: int, seg_name: str):
         def _update():
-            channel_tag = "外报扬声器" if self.player.current_channel == "outside" else "内报扬声器"
+            channel_tag = _("Outside Speaker") if self.player.current_channel == "outside" else _("Inside Speaker")
             self.bottom_title_label.set_text(title)
-            self.bottom_subtitle_label.set_text(f"[{channel_tag}] 正在播放：{seg_name}")
+            self.bottom_subtitle_label.set_text(_("[{channel}] Playing: {segment}").format(channel=channel_tag, segment=seg_name))
             self.bottom_counter_label.set_text(f"{idx + 1} / {total}")
             fraction = (idx + 1) / total if total > 0 else 0.0
             self.bottom_progress.set_fraction(fraction)
@@ -749,24 +883,25 @@ class NextstopWindow(Adw.ApplicationWindow):
 
     def _on_pause_changed(self, is_paused: bool):
         def _update():
+            paused_suffix = _(" (Paused)")
             if is_paused:
                 self.bottom_pause_btn.set_icon_name("media-playback-start-symbolic")
                 cur = self.bottom_subtitle_label.get_text()
-                if not cur.endswith("（已暂停）"):
-                    self.bottom_subtitle_label.set_text(f"{cur}（已暂停）")
+                if not cur.endswith(paused_suffix):
+                    self.bottom_subtitle_label.set_text(f"{cur}{paused_suffix}")
             else:
                 self.bottom_pause_btn.set_icon_name("media-playback-pause-symbolic")
                 cur = self.bottom_subtitle_label.get_text()
-                if cur.endswith("（已暂停）"):
-                    self.bottom_subtitle_label.set_text(cur[:-5])
+                if cur.endswith(paused_suffix):
+                    self.bottom_subtitle_label.set_text(cur[:-len(paused_suffix)])
             return False
 
         GLib.idle_add(_update)
 
     def _on_playback_finished(self):
         def _update():
-            self.bottom_title_label.set_text("空闲就绪")
-            self.bottom_subtitle_label.set_text("播报完成")
+            self.bottom_title_label.set_text(_("Idle Ready"))
+            self.bottom_subtitle_label.set_text(_("Playback finished"))
             self.bottom_counter_label.set_text("")
             self.bottom_progress.set_fraction(1.0)
 
@@ -780,7 +915,7 @@ class NextstopWindow(Adw.ApplicationWindow):
 
     def _on_playback_error(self, err_msg: str):
         def _update():
-            self._show_toast(f"播放发生错误: {err_msg}")
+            self._show_toast(_("Playback error: {err}").format(err=err_msg))
             return False
 
         GLib.idle_add(_update)

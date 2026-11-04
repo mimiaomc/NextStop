@@ -22,3 +22,8 @@ compile_commands.json
 *.swo
 *~
 .DS_Store
+
+# 用户本地语音包与压缩包（不计入 Git）
+packs/
+*.zip
+*.nspack

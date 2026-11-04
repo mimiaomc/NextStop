@@ -8,10 +8,13 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import time
+import zipfile
 from dataclasses import dataclass, field
+from gettext import gettext as _
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 try:
@@ -42,7 +45,7 @@ class PackManager:
     """基于 pack.json 声明驱动的多语音包管理器与广播流水线引擎"""
 
     def __init__(self, packs_root: Optional[str] = None):
-        self.packs_root = packs_root or self._find_packs_root()
+        self.packs_root = packs_root or self.get_user_packs_dir()
         self.available_packs: List[PackInfo] = []
         self.current_pack: Optional[PackInfo] = None
 
@@ -57,49 +60,184 @@ class PackManager:
         self._files: Dict[str, Dict[str, str]] = {}
         self.discover_packs()
 
-    def _find_packs_root(self) -> str:
+    @staticmethod
+    def get_user_packs_dir() -> str:
+        """获取遵循 XDG 规范的用户本地语音包存储目录"""
+        env_dir = os.environ.get("NEXTSTOP_USER_PACKS_DIR") or os.environ.get("NEXTSTOP_PACKS_DIR")
+        if env_dir:
+            os.makedirs(env_dir, exist_ok=True)
+            return os.path.abspath(env_dir)
+
+        try:
+            from gi.repository import GLib
+            user_data = GLib.get_user_data_dir()
+        except Exception:
+            user_data = os.path.expanduser("~/.local/share")
+
+        d = os.path.join(user_data, "nextstop", "packs")
+        os.makedirs(d, exist_ok=True)
+        return os.path.abspath(d)
+
+    def get_search_dirs(self) -> List[str]:
+        """获取所有参与扫描的语音包目录"""
+        dirs = [self.get_user_packs_dir()]
         env_dir = os.environ.get("NEXTSTOP_PACKS_DIR")
         if env_dir and os.path.isdir(env_dir):
-            return env_dir
-
-        base = os.path.dirname(os.path.abspath(__file__))
-        candidates = [
-            os.path.join(base, "..", "packs"),
-            os.path.join(base, "..", "..", "packs"),
-            "/app/share/nextstop/packs",
-            "/usr/share/nextstop/packs",
-            os.path.expanduser("~/Projects/NextStop/packs"),
-            "/var/home/miaolege/Projects/NextStop/packs",
-        ]
-        for c in candidates:
-            if os.path.isdir(c):
-                return os.path.abspath(c)
-        return ""
+            abs_env = os.path.abspath(env_dir)
+            if abs_env not in dirs:
+                dirs.append(abs_env)
+        return dirs
 
     def discover_packs(self):
-        """扫描 packs 根目录下的所有报站语音包"""
+        """扫描所有可用目录下的报站语音包"""
         self.available_packs = []
-        if not self.packs_root or not os.path.isdir(self.packs_root):
-            return
+        seen_ids = set()
 
-        for entry in sorted(os.listdir(self.packs_root)):
-            pack_path = os.path.join(self.packs_root, entry)
-            if not os.path.isdir(pack_path):
+        for search_dir in self.get_search_dirs():
+            if not os.path.isdir(search_dir):
                 continue
-            manifest_path = os.path.join(pack_path, "pack.json")
-            cfg: Dict[str, Any] = {}
-            if os.path.isfile(manifest_path):
+
+            for entry in sorted(os.listdir(search_dir)):
+                pack_path = os.path.join(search_dir, entry)
+                if not os.path.isdir(pack_path):
+                    continue
+                manifest_path = os.path.join(pack_path, "pack.json")
+                if not os.path.isfile(manifest_path):
+                    continue
+
+                cfg: Dict[str, Any] = {}
                 try:
                     with open(manifest_path, "r", encoding="utf-8") as f:
                         cfg = json.load(f)
                 except Exception:
                     cfg = {}
-            pack_id = cfg.get("id", entry)
-            pack_name = cfg.get("name", entry)
-            self.available_packs.append(PackInfo(id=pack_id, name=pack_name, path=pack_path, config=cfg))
 
-        if self.available_packs and not self.current_pack:
-            self.load_pack(self.available_packs[0].id)
+                pack_id = cfg.get("id", entry)
+                if pack_id in seen_ids:
+                    continue
+                seen_ids.add(pack_id)
+                pack_name = cfg.get("name", entry)
+                self.available_packs.append(PackInfo(id=pack_id, name=pack_name, path=pack_path, config=cfg))
+
+        if self.available_packs:
+            if not self.current_pack or not any(p.id == self.current_pack.id for p in self.available_packs):
+                self.load_pack(self.available_packs[0].id)
+        else:
+            self.current_pack = None
+            self.stations = []
+            self.lines = []
+            self.ads = []
+            self.transfers = []
+            self.chimes = []
+            self.intros = []
+            self.intro_items = []
+            self._files = {}
+
+    def import_zip_pack(self, zip_path: str) -> Tuple[bool, str, str]:
+        """从 ZIP 压缩包导入语音包至用户数据目录
+
+        Returns:
+            (success, pack_id, message)
+        """
+        if not os.path.isfile(zip_path):
+            return False, "", _("Specified ZIP file does not exist")
+
+        if not zipfile.is_zipfile(zip_path):
+            return False, "", _("Selected file is not a valid ZIP archive (packs must be .zip format)")
+
+        try:
+            with zipfile.ZipFile(zip_path, "r") as z:
+                names = z.namelist()
+                pack_json_candidates = [
+                    n for n in names
+                    if os.path.basename(n).lower() == "pack.json" and not n.startswith("__MACOSX")
+                ]
+                if not pack_json_candidates:
+                    return False, "", _("No pack.json found inside the archive, cannot recognize as a NextStop pack")
+
+                # 选取路径深度最短的 pack.json
+                pack_json_candidates.sort(key=lambda s: s.count("/"))
+                target_json = pack_json_candidates[0]
+
+                raw_data = z.read(target_json)
+                try:
+                    cfg = json.loads(raw_data.decode("utf-8"))
+                except Exception as e:
+                    return False, "", _("Failed to parse pack.json: {e}").format(e=e)
+
+                pack_name = cfg.get("name", "")
+                pack_id = cfg.get("id", "")
+                if not pack_id:
+                    parent_dir = os.path.dirname(target_json)
+                    if parent_dir:
+                        pack_id = os.path.basename(parent_dir)
+                    else:
+                        pack_id = os.path.splitext(os.path.basename(zip_path))[0]
+
+                pack_id = re.sub(r"[^\w\-.]", "_", pack_id).strip("_") or "imported_pack"
+
+                prefix = os.path.dirname(target_json)
+                if prefix and not prefix.endswith("/"):
+                    prefix += "/"
+
+                user_packs = self.get_user_packs_dir()
+                dest_dir = os.path.join(user_packs, pack_id)
+                dest_dir_real = os.path.abspath(dest_dir)
+
+                if os.path.exists(dest_dir):
+                    shutil.rmtree(dest_dir)
+                os.makedirs(dest_dir, exist_ok=True)
+
+                for member in z.infolist():
+                    m_name = member.filename
+                    if m_name.startswith("__MACOSX"):
+                        continue
+                    if prefix:
+                        if not m_name.startswith(prefix):
+                            continue
+                        rel_name = m_name[len(prefix):]
+                    else:
+                        rel_name = m_name
+
+                    if not rel_name:
+                        continue
+
+                    target_file = os.path.abspath(os.path.join(dest_dir, rel_name))
+                    if not target_file.startswith(dest_dir_real):
+                        raise RuntimeError(_("Illegal path traversal detected in archive: {name}").format(name=m_name))
+
+                    if member.is_dir():
+                        os.makedirs(target_file, exist_ok=True)
+                    else:
+                        os.makedirs(os.path.dirname(target_file), exist_ok=True)
+                        with z.open(member) as s_fp, open(target_file, "wb") as d_fp:
+                            shutil.copyfileobj(s_fp, d_fp)
+
+            self.discover_packs()
+            self.load_pack(pack_id)
+            display_name = pack_name or pack_id
+            return True, pack_id, _("Successfully imported announcement pack: {name}").format(name=display_name)
+
+        except Exception as e:
+            return False, "", _("Failed to import pack: {e}").format(e=e)
+
+    def delete_pack(self, pack_id: str) -> Tuple[bool, str]:
+        """删除指定的用户本地语音包"""
+        pack = next((p for p in self.available_packs if p.id == pack_id), None)
+        if not pack:
+            return False, _("Specified pack not found")
+
+        user_packs = os.path.abspath(self.get_user_packs_dir())
+        pack_path = os.path.abspath(pack.path)
+        if not pack_path.startswith(user_packs):
+            return False, _("Can only delete user-imported packs")
+
+        try:
+            shutil.rmtree(pack_path)
+            self.discover_packs()
+            return True, _("Deleted announcement pack: {name}").format(name=pack.name)
+        except Exception as e:
+            return False, _("Failed to delete pack: {e}").format(e=e)
 
     def load_pack(self, pack_id: str) -> bool:
         """加载或重新扫描指定的语音包"""
@@ -186,14 +324,14 @@ class PackManager:
         if chimes_cfg:
             self.chimes = [c.get("label", "提示音") for c in chimes_cfg]
         else:
-            self.chimes = ["提示音 1", "提示音 2"]
+            self.chimes = []
 
         # 读取换乘配置
         transfers_cfg = cfg.get("transfers", [])
         if transfers_cfg:
             self.transfers = [t.get("label", "") for t in transfers_cfg if t.get("label")]
         else:
-            self.transfers = ["无换乘", "地铁 1 号线", "地铁 2 号线", "地铁 3 号线", "地铁 4 号线"]
+            self.transfers = []
 
     @property
     def config(self) -> Dict[str, Any]:
@@ -264,7 +402,7 @@ class PackManager:
         f = self.get_file(ln_dir, ln)
         if f:
             return f
-        # 忽略空格匹配（如输入 "333路" 匹配 "333 路无人售票车"）
+        # 忽略空格匹配（如输入 "1路" 匹配 "1 路无人售票车"）
         norm_ln = ln.replace(" ", "")
         cat_dict = self._files.get(ln_dir, {})
         for k, v in cat_dict.items():
@@ -400,7 +538,7 @@ class PackManager:
             if stype == "file":
                 f = self.resolve_rel_file(step.get("file", ""))
                 if f:
-                    queue.append(AudioSegment(step.get("label", "广播片段"), f))
+                    queue.append(AudioSegment(step.get("label", _("Announcement Segment")), f))
 
             elif stype == "station":
                 slot_key = step.get("slot", "station")
@@ -408,7 +546,7 @@ class PackManager:
                 f_st = self.get_station_audio(st_name)
                 if not f_st:
                     return []
-                queue.append(AudioSegment(f"站点：{st_name}", f_st))
+                queue.append(AudioSegment(_("Station: {name}").format(name=st_name), f_st))
 
             elif stype == "line":
                 slot_key = step.get("slot", "line")
@@ -416,7 +554,7 @@ class PackManager:
                 f_ln = self.get_line_audio(line_name)
                 if not f_ln:
                     return []
-                queue.append(AudioSegment(f"线路：{line_name}", f_ln))
+                queue.append(AudioSegment(_("Route: {name}").format(name=line_name), f_ln))
 
             elif stype == "chime":
                 slot_key = step.get("slot", "chime")
@@ -430,7 +568,7 @@ class PackManager:
                 if ad_name and ad_name != "无广告":
                     f_ad = self.get_file(ad_dir, ad_name)
                     if f_ad:
-                        queue.append(AudioSegment(f"广告：{ad_name}", f_ad))
+                        queue.append(AudioSegment(_("Commercial: {name}").format(name=ad_name), f_ad))
 
             elif stype == "transfer":
                 slot_key = step.get("slot", "transfer")
@@ -444,7 +582,7 @@ class PackManager:
                     intro_match = self.get_intro_audio(intro_val)
                     if intro_match:
                         intro_label, f_intro = intro_match
-                        queue.append(AudioSegment(f"站点介绍：{intro_label}", f_intro))
+                        queue.append(AudioSegment(_("Station Intro: {name}").format(name=intro_label), f_intro))
 
             elif stype == "trigger":
                 trig_id = step.get("trigger_id", "")
@@ -453,7 +591,7 @@ class PackManager:
                         if trig.get("id") == trig_id:
                             f_tr = self.resolve_rel_file(trig.get("file", ""))
                             if f_tr:
-                                queue.append(AudioSegment(trig.get("label", trig.get("title", "特色介绍")), f_tr))
+                                queue.append(AudioSegment(trig.get("label", trig.get("title", _("Special Intro"))), f_tr))
 
         return queue
 
@@ -602,7 +740,7 @@ class AudioPlayer:
     def list_output_devices(self) -> List[Dict[str, Any]]:
         """枚举系统可用音频输出设备（包含同声卡下的 Speaker / Headphones 独立端口及各输出 Sink）"""
         result: List[Dict[str, Any]] = [
-            {"id": "default", "name": "系统默认输出设备", "gst_device": None}
+            {"id": "default", "name": _("System Default Device"), "gst_device": None}
         ]
         seen_ids = {"default"}
         covered_cards = set()
@@ -693,7 +831,7 @@ class AudioPlayer:
             try:
                 devices = self.device_monitor.get_devices() or []
                 for dev in devices:
-                    disp_name = dev.get_display_name() or dev.get_name() or "音频输出设备"
+                    disp_name = dev.get_display_name() or dev.get_name() or _("Audio Output Device")
                     dev_id = dev.get_name() or disp_name
                     props = dev.get_properties()
                     if props:

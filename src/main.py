@@ -18,9 +18,29 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 
 import sys
-import gi
+import os
+import locale
+import gettext
+import builtins
 
-from gettext import gettext as _
+APP_ID = 'com.github.mimiaomc.nextstop'
+GETTEXT_DOMAIN = 'nextstop'
+
+LOCALE_DIR = '/app/share/locale'
+if not os.path.exists(LOCALE_DIR):
+    LOCALE_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'po')
+
+try:
+    locale.bindtextdomain(GETTEXT_DOMAIN, LOCALE_DIR)
+    locale.textdomain(GETTEXT_DOMAIN)
+    gettext.bindtextdomain(GETTEXT_DOMAIN, LOCALE_DIR)
+    gettext.textdomain(GETTEXT_DOMAIN)
+except AttributeError:
+    pass
+
+builtins._ = gettext.gettext
+
+import gi
 
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
@@ -57,10 +77,14 @@ class NextstopApplication(Adw.Application):
                                 application_icon='com.github.mimiaomc.nextstop',
                                 developer_name='MM 喵了个',
                                 version='0.1.0',
+                                comments=_('Transit announcement and broadcast simulator'),
+                                website='https://github.com/mimiaomc/NextStop',
+                                issue_url='https://github.com/mimiaomc/NextStop/issues',
                                 # Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
-                                translator_credits = _('translator-credits'),
+                                translator_credits=_('translator-credits'),
                                 developers=['MM 喵了个'],
-                                copyright='© 2026 MM 喵了个')
+                                copyright='© 2026 MM 喵了个',
+                                license_type=Gtk.License.LGPL_3_0)
         about.present(self.props.active_window)
 
     def on_preferences_action(self, widget, _):

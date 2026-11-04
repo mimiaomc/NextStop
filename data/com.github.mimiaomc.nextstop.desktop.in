@@ -1,10 +1,11 @@
 [Desktop Entry]
 Name=NextStop
+Comment=Transit Announcement Simulator
 Exec=nextstop
 Icon=com.github.mimiaomc.nextstop
 Terminal=false
 Type=Application
-Categories=Utility;
-Keywords=GTK;
+Categories=Utility;Audio;AudioVideo;
+Keywords=Transit;Announcement;Bus;Metro;Audio;Broadcast;
 StartupNotify=true
 DBusActivatable=true

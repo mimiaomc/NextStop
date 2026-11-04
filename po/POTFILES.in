@@ -3,6 +3,7 @@
 data/com.github.mimiaomc.nextstop.desktop.in
 data/com.github.mimiaomc.nextstop.metainfo.xml.in
 data/com.github.mimiaomc.nextstop.gschema.xml
+src/engine.py
 src/main.py
 src/window.py
 src/window.ui

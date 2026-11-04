@@ -9,8 +9,8 @@ gnome = import('gnome')
 
 pkgdatadir = get_option('prefix') / get_option('datadir') / meson.project_name()
 
-# 安装报站语音包
-install_subdir('packs', install_dir: pkgdatadir)
+# 报站语音包现已全部由用户本地导入与管理（遵循 XDG 用户数据目录规范）
+# 开发目录与安装包不再捆绑内置音频素材
 
 subdir('data')
 subdir('src')

@@ -1,0 +1,516 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: nextstop\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-04 08:25+0000\n"
+"PO-Revision-Date: 2026-11-04 08:25+0000\n"
+"Last-Translator: MM 喵了个 <mimiaominecraft@outlook.com>\n"
+"Language-Team: Chinese (Simplified) <zh_CN>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.9\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid " (Paused)"
+msgstr "（已暂停）"
+
+msgid "About NextStop"
+msgstr "关于 NextStop"
+
+msgid "Announcement Pack (*.zip)"
+msgstr "报站语音包 (*.zip)"
+
+msgid "Announcement Segment"
+msgstr "广播片段"
+
+msgid "Are you sure you want to delete pack \"{name}\" and all its audio files? This action cannot be undone."
+msgstr "即将从本地磁盘删除语音包“{name}”及其所有音频素材，此操作不可恢复。"
+
+msgid "Arrival Broadcast"
+msgstr "进站广播"
+
+msgid "Arrival Chime"
+msgstr "进站提示音"
+
+msgid "Arrival chime, commercials and rear door exit notice"
+msgstr "到站提示音、商业广告与后门下车台阶提醒"
+
+msgid "Arrive / Approaching Broadcast"
+msgstr "进站 / 到站广播"
+
+msgid "Arrive Stop"
+msgstr "播报到站"
+
+msgid "Arriving Station"
+msgstr "到达站点"
+
+msgid "Assemble and play departure audio queue according to pack rules"
+msgstr "按当前语音包规则拼装并播报出站语音队列"
+
+msgid "Assign distinct audio output devices for inside vehicle announcements and outside loudspeaker"
+msgstr "可分别指定车内报站（内报）与车外进站广播（外报）的输出设备，实现车内与车外喇叭独立发声"
+
+msgid "Audio & Speakers"
+msgstr "音频与扬声器"
+
+msgid "Audio Output Device"
+msgstr "音频输出设备"
+
+msgid "Audio file not found: {file}"
+msgstr "未找到音频：{file}"
+
+msgid ""
+"Audio recording for route \"{name}\" is not found in the current pack.\n"
+"\n"
+"If you just added the audio file, click the Refresh button on the top left to reload!"
+msgstr ""
+"当前语音包中尚未收录「{name}」的线路名录音。\n"
+"\n"
+"如果刚刚剪辑放入了音频，可点击左上角的刷新按钮重新加载！"
+
+msgid ""
+"Audio recording for station \"{name}\" is not found in the current pack.\n"
+"\n"
+"If you just added the audio file, click the Refresh button on the top left to reload!"
+msgstr ""
+"当前语音包中尚未收录「{name}」的报站录音。\n"
+"\n"
+"如果刚刚剪辑放入了音频，可点击左上角的刷新按钮重新加载！"
+
+msgid "Broadcast Origin"
+msgstr "播报首站"
+
+msgid "Broadcast Outside"
+msgstr "播报外报"
+
+msgid "Broadcast Terminus"
+msgstr "播报终点"
+
+msgid "Can only delete user-imported packs"
+msgstr "只能删除用户本地目录中的语音包"
+
+msgid "Cancel"
+msgstr "取消"
+
+msgid "Chime - Commercial - Arrival - Safety reminder"
+msgstr "提示音 - 商业广告 - 到站 - 下车安全提醒"
+
+msgid "Clear intro (do not broadcast)"
+msgstr "清空介绍（不插播）"
+
+msgid "Click to reload list after connecting new Bluetooth speakers, headphones or USB audio"
+msgstr "接入新的蓝牙音箱、耳机或 USB 声卡后点击刷新列表"
+
+msgid "Commercial Ad"
+msgstr "随站商业广告"
+
+msgid "Commercial: {name}"
+msgstr "广告：{name}"
+
+msgid "Current Route: {line} · Bound for {dest}"
+msgstr "当前线路：{line} · 开往 {dest}"
+
+msgid "Current pack has no global vehicle or system switches configured"
+msgstr "当前语音包未配置全局车型或系统特性开关"
+
+msgid "Current pack has no quick clips configured"
+msgstr "当前语音包未配置快捷口令音频"
+
+msgid "Daily Dispatch"
+msgstr "日常报站"
+
+msgid "Delete"
+msgstr "删除"
+
+msgid "Delete Announcement Pack?"
+msgstr "确认删除语音包？"
+
+msgid "Delete Current Pack..."
+msgstr "删除当前语音包..."
+
+msgid "Deleted announcement pack: {name}"
+msgstr "已删除语音包：{name}"
+
+msgid "Depart / Next Station Broadcast"
+msgstr "出站 / 下一站广播"
+
+msgid "Depart Alert: Next Station {name}"
+msgstr "出站预告：下一站 {name}"
+
+msgid "Destination"
+msgstr "开往终点站"
+
+msgid "Destination Station"
+msgstr "终点站"
+
+msgid "External loudspeaker: safety notice, line name and destination"
+msgstr "车外顶置扬声器广播：进站安全提醒、当前运行线路与开往方向"
+
+msgid "Failed to delete pack: {e}"
+msgstr "删除语音包失败：{e}"
+
+msgid "Failed to import pack: {e}"
+msgstr "导入语音包失败：{e}"
+
+msgid "Failed to open directory: {err}"
+msgstr "打开目录失败：{err}"
+
+msgid "Failed to parse pack.json: {e}"
+msgstr "pack.json 解析失败：{e}"
+
+msgid "Feature intro audio not recorded: {name}"
+msgstr "未收录「{name}」的站点介绍音频"
+
+msgid "Full line introduction, welcome message, origin and destination"
+msgstr "全线运行介绍、欢迎词、起止站播报"
+
+msgid "Global broadcast switches defined by current pack.json"
+msgstr "由当前语音包配置文件（pack.json）定义的全局播报开关"
+
+msgid "Idle Ready"
+msgstr "空闲就绪"
+
+msgid "Illegal path traversal detected in archive: {name}"
+msgstr "压缩包内存在越界非法路径：{name}"
+
+msgid "Import"
+msgstr "导入"
+
+msgid "Import Failed"
+msgstr "导入失败"
+
+msgid "Import Pack (.zip)"
+msgstr "导入语音包 (.zip)"
+
+msgid "Import Pack (.zip)..."
+msgstr "导入语音包 (.zip)..."
+
+msgid "Import a ZIP announcement pack containing pack.json to start simulating"
+msgstr "导入包含 pack.json 的 ZIP 格式报站语音包以开始使用模拟报站"
+
+msgid "Import announcement pack (.zip)"
+msgstr "导入报站语音包（仅限 .zip 格式）"
+
+msgid "Inside Speaker"
+msgstr "内报扬声器"
+
+msgid "Inside Speaker Test"
+msgstr "内报扬声器测试"
+
+msgid "Inside Vehicle Speaker"
+msgstr "车内广播扬声器（内报）"
+
+msgid "Instant Broadcast Clips"
+msgstr "单项快捷口令"
+
+msgid "Instant single broadcast clips defined by current pack"
+msgstr "由当前语音包定义的单句即时广播"
+
+msgid "Keyboard Shortcuts"
+msgstr "快捷键"
+
+msgid "Library refreshed ({n} stations)"
+msgstr "已刷新素材库（共 {n} 个站点）"
+
+msgid "Library refreshed, no packs detected"
+msgstr "已刷新素材库，当前未检测到语音包"
+
+msgid "Main Menu"
+msgstr "主菜单"
+
+msgid "Mute"
+msgstr "静音"
+
+msgid "Mute / Unmute"
+msgstr "静音 / 取消静音"
+
+msgid "Next Station"
+msgstr "下一站站名"
+
+msgid "Next station field is currently empty"
+msgstr "出站下一站目前为空"
+
+msgid "NextStop - Universal Transit Announcement Simulator"
+msgstr "NextStop - 通用报站模拟器"
+
+msgid "NextStop Broadcaster"
+msgstr "NextStop 报站器"
+
+msgid "NextStop is a customizable transit announcement simulator for buses, metros, and trains driven by audio pack declarations."
+msgstr "NextStop 是一款由语音包声明驱动、高度可定制的公交、地铁与轨道交通报站模拟器。"
+
+msgid "No Announcement Packs Added"
+msgstr "未添加报站语音包"
+
+msgid "No Global Feature Switches"
+msgstr "无全局特性开关"
+
+msgid "No Quick Clips"
+msgstr "无快捷口令"
+
+msgid "No intro"
+msgstr "不插播介绍"
+
+msgid "No pack imported"
+msgstr "未导入语音包"
+
+msgid "No pack loaded to delete"
+msgstr "当前没有可删除的语音包"
+
+msgid "No pack.json found inside the archive, cannot recognize as a NextStop pack"
+msgstr "压缩包内未找到 pack.json 配置文件，无法识别为 NextStop 报站包"
+
+msgid "No playable audio segments found"
+msgstr "未找到可播放的音频切片"
+
+msgid "No transfer"
+msgstr "无换乘"
+
+msgid "OK"
+msgstr "确定"
+
+msgid "Open Packs Folder"
+msgstr "打开语音包目录"
+
+msgid "Operating Line"
+msgstr "运行线路"
+
+msgid "Origin Departure Broadcast"
+msgstr "始发站启程大广播"
+
+msgid "Origin Departure: {name}"
+msgstr "始发站启程：{name}"
+
+msgid "Origin Station"
+msgstr "始发站"
+
+msgid "Outside Arrival Broadcast"
+msgstr "车外进站广播（外报）"
+
+msgid "Outside Arrival: {line} (Bound for {dest})"
+msgstr "车外进站广播：{line}（开往 {dest}）"
+
+msgid "Outside Loudspeaker"
+msgstr "车外广播扬声器（外报）"
+
+msgid "Outside Speaker"
+msgstr "外报扬声器"
+
+msgid "Outside Speaker Test"
+msgstr "外报扬声器测试"
+
+msgid "Pause / Resume"
+msgstr "暂停 / 继续"
+
+msgid "Play Arrival Broadcast"
+msgstr "播放到站广播"
+
+msgid "Play Depart Broadcast"
+msgstr "播放出站广播"
+
+msgid "Play Origin Broadcast"
+msgstr "播放始发大广播"
+
+msgid "Play Outside Arrival Broadcast"
+msgstr "播放车外进站广播"
+
+msgid "Play Terminus Broadcast"
+msgstr "播放终点站到站"
+
+msgid "Play departure announcements for starting terminus"
+msgstr "为首发站乘客播报全线起讫点与乘车规约"
+
+msgid "Play final arrival notice"
+msgstr "向全体乘客播报终点站到达与致谢再会词"
+
+msgid "Play safety reminder and route destination via outside speaker"
+msgstr "通过车外顶置扬声器提醒候车乘客注意安全并播报开往方向"
+
+msgid "Playback error: {err}"
+msgstr "播放发生错误: {err}"
+
+msgid "Playback finished"
+msgstr "播报完成"
+
+msgid "Please enter or select the arrival station name"
+msgstr "请输入或选择到达站点"
+
+msgid "Please enter or select the destination station"
+msgstr "请输入或选择开往终点站"
+
+msgid "Please enter or select the next station name"
+msgstr "请输入或选择下一站站名"
+
+msgid "Please enter or select the operating line"
+msgstr "请输入或选择当前运行线路"
+
+msgid "Preferences"
+msgstr "偏好设置"
+
+msgid "Refresh"
+msgstr "刷新列表"
+
+msgid "Refresh audio library"
+msgstr "刷新音频素材库"
+
+msgid "Rescan Audio Devices"
+msgstr "重新扫描音频设备"
+
+msgid "Route / Line"
+msgstr "运行线路"
+
+msgid "Route Not Recorded"
+msgstr "未收录该线路"
+
+msgid "Route not recorded: {name}"
+msgstr "未收录线路：{name}"
+
+msgid "Route: {name}"
+msgstr "线路：{name}"
+
+msgid "Select Announcement Pack ZIP Archive"
+msgstr "选择报站语音包 ZIP 压缩包"
+
+msgid "Select broadcast content above and click play"
+msgstr "在上方选择报站内容后点击播放"
+
+msgid "Select existing line from library"
+msgstr "从素材库选已有线路填入"
+
+msgid "Select existing station from library"
+msgstr "从素材库选已有站点填入"
+
+msgid "Select from library..."
+msgstr "从素材库选已有..."
+
+msgid "Select intro from library"
+msgstr "从素材库选已有介绍"
+
+msgid "Selected file is not a valid ZIP archive (packs must be .zip format)"
+msgstr "所选文件不是有效的 ZIP 压缩包（语音包仅限 .zip 格式）"
+
+msgid "Single Broadcast: {label}"
+msgstr "单段播报：{label}"
+
+msgid "Skip to next segment"
+msgstr "跳过当前片段（直接播下一段）"
+
+msgid "Speaker Output Routing"
+msgstr "内外报扬声器通道分离"
+
+msgid "Special Intro"
+msgstr "特色介绍"
+
+msgid "Specified ZIP file does not exist"
+msgstr "指定的 ZIP 压缩包文件不存在"
+
+msgid "Specified pack not found"
+msgstr "未找到指定的语音包"
+
+msgid "Start Trip"
+msgstr "播报起步"
+
+msgid "Start alert, next stop notice, transfers and station specials"
+msgstr "起步提醒、下一站预告、换乘与站点专属插播"
+
+msgid "Station Feature Intro (Optional)"
+msgstr "站点特色介绍（可选）"
+
+msgid "Station Intro: {name}"
+msgstr "站点介绍：{name}"
+
+msgid "Station Not Recorded"
+msgstr "未收录该站点"
+
+msgid "Station not recorded: {name}"
+msgstr "未收录站点：{name}"
+
+msgid "Station: {name}"
+msgstr "站点：{name}"
+
+msgid "Stop playback"
+msgstr "停止播放"
+
+msgid "Successfully imported announcement pack: {name}"
+msgstr "成功导入报站语音包：{name}"
+
+msgid "Switch announcement pack"
+msgstr "切换报站语音包"
+
+msgid "Switched pack: {name}"
+msgstr "已切换语音包：{name}"
+
+msgid "Sync from Next Station"
+msgstr "同出站下一站（一键复制出站站名）"
+
+msgid "Synchronized arrival station: {name}"
+msgstr "已同步到达站点：{name}"
+
+msgid "System Default Device"
+msgstr "系统默认输出设备"
+
+msgid "Terminus & Route"
+msgstr "首末站与广播"
+
+msgid "Terminus Arrival"
+msgstr "终点站到达"
+
+msgid "Terminus Arrival Broadcast"
+msgstr "终点站到站广播"
+
+msgid "Terminus Arrival: {name}"
+msgstr "终点站到达：{name}"
+
+msgid "Terminus Station"
+msgstr "终点站点"
+
+msgid "Terminus arrival notice and reminder to take all belongings"
+msgstr "全程终点到达提醒、请带好随身物品下车广播"
+
+msgid "Test Inside"
+msgstr "试听内报"
+
+msgid "Test Outside"
+msgstr "试听外报"
+
+msgid "Transfer Lines"
+msgstr "换乘线路"
+
+msgid "Transfers: {list}"
+msgstr "换乘：{list}"
+
+msgid "Transit Announcement Simulator"
+msgstr "通用报站模拟器"
+
+msgid "Transit announcement and broadcast simulator"
+msgstr "公交与轨道交通报站广播模拟器"
+
+msgid "Unmute"
+msgstr "取消静音"
+
+msgid "Unset Destination"
+msgstr "未设终点"
+
+msgid "Unset Route"
+msgstr "未设线路"
+
+msgid "Used for daily depart, arrive, origin and terminus broadcasts"
+msgstr "用于日常出站、到站、始发与终点站等车厢内广播"
+
+msgid "Used for external arrival broadcasts (connect an external Bluetooth speaker or secondary sound card)"
+msgstr "用于车外进站广播（可外接蓝牙音箱或第二声卡模拟车外大喇叭）"
+
+msgid "Vehicle & Features"
+msgstr "车型与特性"
+
+msgid "Vehicle & System Features"
+msgstr "车型与系统特性"
+
+msgid "[{channel}] Playing: {segment}"
+msgstr "[{channel}] 正在播放：{segment}"
+
+msgid "translator-credits"
+msgstr "MM 喵了个 <mimiaominecraft@outlook.com>"
+
