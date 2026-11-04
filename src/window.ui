@@ -216,13 +216,13 @@
                         <child>
                           <object class="AdwViewStackPage">
                             <property name="name">features</property>
-                            <property name="title" translatable="yes">Vehicle &amp; Features</property>
+                            <property name="title" translatable="yes">Vehicle and Features</property>
                             <property name="icon-name">emblem-system-symbolic</property>
                             <property name="child">
                               <object class="AdwPreferencesPage">
                                 <child>
                                   <object class="AdwPreferencesGroup" id="global_switches_group">
-                                    <property name="title" translatable="yes">Vehicle &amp; System Features</property>
+                                    <property name="title" translatable="yes">Vehicle and System Features</property>
                                     <property name="description" translatable="yes">Global broadcast switches defined by current pack.json</property>
                                   </object>
                                 </child>
@@ -235,7 +235,7 @@
                         <child>
                           <object class="AdwViewStackPage">
                             <property name="name">special</property>
-                            <property name="title" translatable="yes">Terminus &amp; Route</property>
+                            <property name="title" translatable="yes">Terminus and Route</property>
                             <property name="icon-name">audio-speakers-symbolic</property>
                             <property name="child">
                               <object class="AdwPreferencesPage">

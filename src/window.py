@@ -929,7 +929,7 @@ class NextstopWindow(Adw.ApplicationWindow):
             dlg = Adw.PreferencesWindow(title=_("Preferences"), transient_for=self, modal=True)
             is_dialog = False
 
-        page = Adw.PreferencesPage(title=_("Audio & Speakers"), icon_name="audio-speakers-symbolic")
+        page = Adw.PreferencesPage(title=_("Audio and Speakers"), icon_name="audio-speakers-symbolic")
         audio_group = Adw.PreferencesGroup(
             title=_("Speaker Output Routing"),
             description=_("Assign distinct audio output devices for inside vehicle announcements and outside loudspeaker"),

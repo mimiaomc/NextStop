@@ -52,7 +52,7 @@ msgstr "按当前语音包规则拼装并播报出站语音队列"
 msgid "Assign distinct audio output devices for inside vehicle announcements and outside loudspeaker"
 msgstr "可分别指定车内报站（内报）与车外进站广播（外报）的输出设备，实现车内与车外喇叭独立发声"
 
-msgid "Audio & Speakers"
+msgid "Audio and Speakers"
 msgstr "音频与扬声器"
 
 msgid "Audio Output Device"
@@ -454,7 +454,7 @@ msgstr "已同步到达站点：{name}"
 msgid "System Default Device"
 msgstr "系统默认输出设备"
 
-msgid "Terminus & Route"
+msgid "Terminus and Route"
 msgstr "首末站与广播"
 
 msgid "Terminus Arrival"
@@ -505,10 +505,10 @@ msgstr "用于日常出站、到站、始发与终点站等车厢内广播"
 msgid "Used for external arrival broadcasts (connect an external Bluetooth speaker or secondary sound card)"
 msgstr "用于车外进站广播（可外接蓝牙音箱或第二声卡模拟车外大喇叭）"
 
-msgid "Vehicle & Features"
+msgid "Vehicle and Features"
 msgstr "车型与特性"
 
-msgid "Vehicle & System Features"
+msgid "Vehicle and System Features"
 msgstr "车型与系统特性"
 
 msgid "[{channel}] Playing: {segment}"
