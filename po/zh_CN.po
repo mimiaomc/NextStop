@@ -127,8 +127,11 @@ msgstr "删除"
 msgid "Delete Announcement Pack?"
 msgstr "确认删除语音包？"
 
-msgid "Delete Current Pack..."
-msgstr "删除当前语音包..."
+msgid "Delete Packs..."
+msgstr "删除包..."
+
+msgid "Delete Packs"
+msgstr "删除包"
 
 msgid "Deleted announcement pack: {name}"
 msgstr "已删除语音包：{name}"
@@ -510,6 +513,93 @@ msgstr "车型与系统特性"
 
 msgid "[{channel}] Playing: {segment}"
 msgstr "[{channel}] 正在播放：{segment}"
+
+msgid "Installed Announcement Packs"
+msgstr "已安装的报站语音包"
+
+msgid "View and delete imported transit announcement packs"
+msgstr "查看并删除已导入的公共交通报站语音包"
+
+msgid "No announcement packs installed"
+msgstr "未安装任何报站语音包"
+
+msgid "Import a .zip pack to get started"
+msgstr "请先从主界面或菜单导入 .zip 语音包"
+
+msgid "Currently In Use"
+msgstr "当前使用中"
+
+msgid "Delete this pack"
+msgstr "删除此报站包"
+
+msgid "Delete Pack '{name}'?"
+msgstr "删除报站包“{name}”？"
+
+msgid "Are you sure you want to permanently delete announcement pack '{name}' ({id})? This action cannot be undone."
+msgstr "确定要永久删除报站包“{name}”({id}) 及其所有音频文件吗？此操作无法撤销。"
+
+msgid "Deleted pack: {name}"
+msgstr "已删除报站包：{name}"
+
+msgid "Cannot parse pack archive"
+msgstr "无法解析语音包压缩文件"
+
+msgid "Update Announcement Pack?"
+msgstr "更新报站语音包？"
+
+msgid ""
+"An announcement pack '{name}' ({id}) is already installed.\n"
+"\n"
+"Current version: {old_ver}\n"
+"New version: {new_ver}\n"
+"\n"
+"Do you want to update to the new version?"
+msgstr ""
+"已安装同标识符的报站包“{name}”({id})。\n"
+"\n"
+"当前已安装版本：{old_ver}\n"
+"即将导入新版本：{new_ver}\n"
+"\n"
+"是否更新到新版本？"
+
+msgid "Update"
+msgstr "更新"
+
+msgid "Reinstall Announcement Pack?"
+msgstr "重新安装报站语音包？"
+
+msgid ""
+"Announcement pack '{name}' ({id}) is already installed with the same version ({ver}).\n"
+"\n"
+"Do you want to overwrite and reinstall it?"
+msgstr ""
+"已安装版本相同的报站包“{name}”({id}) (v{ver})。\n"
+"\n"
+"是否覆盖并重新安装？"
+
+msgid "Reinstall"
+msgstr "重新安装"
+
+msgid "Downgrade Announcement Pack?"
+msgstr "降级报站语音包？"
+
+msgid ""
+"The installed announcement pack '{name}' ({id}) has a newer version ({old_ver}) than the archive ({new_ver}).\n"
+"\n"
+"Do you really want to downgrade?"
+msgstr ""
+"已安装的报站包“{name}”({id}) 版本较高 (v{old_ver})，而导入的文件版本较低 (v{new_ver})。\n"
+"\n"
+"确定要降级吗？"
+
+msgid "Downgrade"
+msgstr "降级"
+
+msgid "Successfully updated announcement pack: {name} (v{version})"
+msgstr "已成功更新报站语音包：{name} (v{version})"
+
+msgid "Failed to inspect zip archive: {e}"
+msgstr "预读压缩包失败：{e}"
 
 msgid "translator-credits"
 msgstr "MM 喵了个 <mimiaominecraft@outlook.com>"

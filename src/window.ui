@@ -503,7 +503,7 @@
         <attribute name="action">win.open_packs_dir</attribute>
       </item>
       <item>
-        <attribute name="label" translatable="yes">Delete Current Pack...</attribute>
+        <attribute name="label" translatable="yes">Delete Packs...</attribute>
         <attribute name="action">win.delete_pack</attribute>
       </item>
     </section>

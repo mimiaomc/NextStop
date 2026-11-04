@@ -423,19 +423,98 @@ class NextstopWindow(Adw.ApplicationWindow):
             if gfile:
                 path = gfile.get_path()
                 if path:
-                    success, pack_id, msg = self.pack_manager.import_zip_pack(path)
-                    if success:
-                        self._show_toast(msg)
-                        self._populate_pack_dropdown()
-                        self._rebuild_pack_ui()
-                    else:
-                        alert = Adw.MessageDialog.new(
-                            self,
-                            _("Import Failed"),
-                            msg,
-                        )
-                        alert.add_response("ok", _("OK"))
-                        alert.present()
+                    self._handle_import_path(path)
+
+    def _handle_import_path(self, path: str):
+        ok, info = self.pack_manager.inspect_zip_pack(path)
+        if not ok:
+            err_msg = info.get("error", _("Cannot parse pack archive"))
+            self._show_alert_dialog(_("Import Failed"), err_msg)
+            return
+
+        existing = info.get("existing")
+        if not existing:
+            # 新安装包，直接导入
+            self._do_import_pack(path)
+            return
+
+        pack_name = info["name"]
+        pack_id = info["id"]
+        old_ver = info["existing_version"]
+        new_ver = info["version"]
+        cmp_res = info["cmp"]
+
+        if cmp_res > 0:
+            heading = _("Update Announcement Pack?")
+            body = _("An announcement pack '{name}' ({id}) is already installed.\n\nCurrent version: {old_ver}\nNew version: {new_ver}\n\nDo you want to update to the new version?").format(
+                name=pack_name, id=pack_id, old_ver=old_ver, new_ver=new_ver
+            )
+            action_id = "update"
+            action_label = _("Update")
+            appearance = Adw.ResponseAppearance.SUGGESTED
+        elif cmp_res == 0:
+            heading = _("Reinstall Announcement Pack?")
+            body = _("Announcement pack '{name}' ({id}) is already installed with the same version ({ver}).\n\nDo you want to overwrite and reinstall it?").format(
+                name=pack_name, id=pack_id, ver=new_ver
+            )
+            action_id = "reinstall"
+            action_label = _("Reinstall")
+            appearance = Adw.ResponseAppearance.DEFAULT
+        else:
+            heading = _("Downgrade Announcement Pack?")
+            body = _("The installed announcement pack '{name}' ({id}) has a newer version ({old_ver}) than the archive ({new_ver}).\n\nDo you really want to downgrade?").format(
+                name=pack_name, id=pack_id, old_ver=old_ver, new_ver=new_ver
+            )
+            action_id = "downgrade"
+            action_label = _("Downgrade")
+            appearance = Adw.ResponseAppearance.DESTRUCTIVE
+
+        if hasattr(Adw, "AlertDialog"):
+            alert = Adw.AlertDialog(heading=heading, body=body)
+            alert.add_response("cancel", _("Cancel"))
+            alert.add_response(action_id, action_label)
+            alert.set_response_appearance(action_id, appearance)
+
+            def _on_confirm(_d, resp):
+                if resp == action_id:
+                    self._do_import_pack(path)
+
+            alert.choose(self, None, _on_confirm)
+        elif hasattr(Adw, "MessageDialog"):
+            alert = Adw.MessageDialog.new(self, heading, body)
+            alert.add_response("cancel", _("Cancel"))
+            alert.add_response(action_id, action_label)
+            alert.set_response_appearance(action_id, appearance)
+
+            def _on_resp(_d, resp):
+                if resp == action_id:
+                    self._do_import_pack(path)
+
+            alert.connect("response", _on_resp)
+            alert.present()
+        else:
+            self._do_import_pack(path)
+
+    def _do_import_pack(self, path: str):
+        success, pack_id, msg = self.pack_manager.import_zip_pack(path)
+        if success:
+            self._show_toast(msg)
+            self._populate_pack_dropdown()
+            self._rebuild_pack_ui()
+        else:
+            self._show_alert_dialog(_("Import Failed"), msg)
+
+    def _show_alert_dialog(self, heading: str, body: str):
+        if hasattr(Adw, "AlertDialog"):
+            alert = Adw.AlertDialog(heading=heading, body=body)
+            alert.add_response("ok", _("OK"))
+            alert.present(self)
+        elif hasattr(Adw, "MessageDialog"):
+            alert = Adw.MessageDialog.new(self, heading, body)
+            alert.add_response("ok", _("OK"))
+            alert.present()
+        else:
+            self._show_toast(f"{heading}: {body}")
 
     def _on_open_packs_dir_clicked(self, *args):
         packs_dir = self.pack_manager.get_user_packs_dir()
@@ -446,29 +525,114 @@ class NextstopWindow(Adw.ApplicationWindow):
             self._show_toast(_("Failed to open directory: {err}").format(err=e))
 
     def _on_delete_pack_clicked(self, *args):
-        cur = self.pack_manager.current_pack
-        if not cur:
-            self._show_toast(_("No pack loaded to delete"))
-            return
+        self.open_manage_packs_dialog()
 
-        dialog = Adw.MessageDialog.new(
-            self,
-            _("Delete Announcement Pack?"),
-            _("Are you sure you want to delete pack \"{name}\" and all its audio files? This action cannot be undone.").format(name=cur.name),
+    def open_manage_packs_dialog(self):
+        """打开类似首选项的二级弹窗，显示已安装报站包并支持逐一删除"""
+        if hasattr(Adw, "PreferencesDialog"):
+            dlg = Adw.PreferencesDialog(title=_("Delete Packs"))
+            is_dialog = True
+        else:
+            dlg = Adw.PreferencesWindow(title=_("Delete Packs"), transient_for=self, modal=True)
+            is_dialog = False
+
+        page = Adw.PreferencesPage()
+        group = Adw.PreferencesGroup(
+            title=_("Installed Announcement Packs"),
+            description=_("View and delete imported transit announcement packs"),
         )
-        dialog.add_response("cancel", _("Cancel"))
-        dialog.add_response("delete", _("Delete"))
-        dialog.set_response_appearance("delete", Adw.ResponseAppearance.DESTRUCTIVE)
+        page.add(group)
+        dlg.add(page)
 
-        def _on_response(_d, resp):
-            if resp == "delete":
-                ok, msg = self.pack_manager.delete_pack(cur.id)
-                self._show_toast(msg)
+        dynamic_rows = []
+
+        def _rebuild_group():
+            for r in dynamic_rows:
+                group.remove(r)
+            dynamic_rows.clear()
+
+            packs = self.pack_manager.available_packs
+            if not packs:
+                empty_row = Adw.ActionRow(
+                    title=_("No announcement packs installed"),
+                    subtitle=_("Import a .zip pack to get started"),
+                    icon_name="package-x-generic-symbolic",
+                )
+                group.add(empty_row)
+                dynamic_rows.append(empty_row)
+                return
+
+            for pack in packs:
+                row = Adw.ActionRow(title=pack.name)
+                is_current = bool(self.pack_manager.current_pack and self.pack_manager.current_pack.id == pack.id)
+
+                sub_parts = [f"v{pack.version}"]
+                if pack.city:
+                    sub_parts.append(pack.city)
+                if pack.system_type:
+                    sub_parts.append(pack.system_type)
+                if is_current:
+                    sub_parts.append(_("Currently In Use"))
+                row.set_subtitle(" • ".join(sub_parts))
+
+                del_btn = Gtk.Button(
+                    icon_name="user-trash-symbolic",
+                    valign=Gtk.Align.CENTER,
+                    tooltip_text=_("Delete this pack"),
+                )
+                del_btn.add_css_class("flat")
+                del_btn.add_css_class("destructive-action")
+                del_btn.connect("clicked", lambda _b, p=pack: _on_confirm_delete(p))
+                row.add_suffix(del_btn)
+                group.add(row)
+                dynamic_rows.append(row)
+
+        def _on_confirm_delete(pack):
+            heading = _("Delete Pack '{name}'?").format(name=pack.name)
+            body = _("Are you sure you want to permanently delete announcement pack '{name}' ({id})? This action cannot be undone.").format(
+                name=pack.name, id=pack.id
+            )
+
+            if hasattr(Adw, "AlertDialog"):
+                alert = Adw.AlertDialog(heading=heading, body=body)
+                alert.add_response("cancel", _("Cancel"))
+                alert.add_response("delete", _("Delete"))
+                alert.set_response_appearance("delete", Adw.ResponseAppearance.DESTRUCTIVE)
+
+                def _alert_done(_d, resp):
+                    if resp == "delete":
+                        _execute_delete(pack)
+
+                alert.choose(dlg, None, _alert_done)
+            elif hasattr(Adw, "MessageDialog"):
+                alert = Adw.MessageDialog.new(dlg if not is_dialog else self, heading, body)
+                alert.add_response("cancel", _("Cancel"))
+                alert.add_response("delete", _("Delete"))
+                alert.set_response_appearance("delete", Adw.ResponseAppearance.DESTRUCTIVE)
+
+                def _on_resp(_d, resp):
+                    if resp == "delete":
+                        _execute_delete(pack)
+
+                alert.connect("response", _on_resp)
+                alert.present()
+
+        def _execute_delete(pack):
+            ok, msg = self.pack_manager.delete_pack(pack.id)
+            if ok:
+                self._show_toast(_("Deleted pack: {name}").format(name=pack.name))
                 self._populate_pack_dropdown()
                 self._rebuild_pack_ui()
+                _rebuild_group()
+            else:
+                self._show_toast(msg)
 
-        dialog.connect("response", _on_response)
-        dialog.present()
+        _rebuild_group()
+
+        if is_dialog:
+            dlg.present(self)
+        else:
+            dlg.present()
 
     def _on_refresh_pack_clicked(self, *args):
         self.pack_manager.reload_current_pack()

@@ -27,6 +27,26 @@ except Exception:
     HAS_GST = False
 
 
+def parse_version_tuple(ver_str: Any) -> Tuple[int, ...]:
+    """将版本字符串解析为数字元组以便比较（如 '1.0.1' -> (1, 0, 1)）"""
+    nums = [int(x) for x in re.findall(r"\d+", str(ver_str or ""))]
+    return tuple(nums) if nums else (0,)
+
+
+def compare_versions(v1: Any, v2: Any) -> int:
+    """比较两个版本号。v1 > v2 返回 1；v1 == v2 返回 0；v1 < v2 返回 -1"""
+    t1 = parse_version_tuple(v1)
+    t2 = parse_version_tuple(v2)
+    max_len = max(len(t1), len(t2))
+    t1 += (0,) * (max_len - len(t1))
+    t2 += (0,) * (max_len - len(t2))
+    if t1 > t2:
+        return 1
+    elif t1 < t2:
+        return -1
+    return 0
+
+
 @dataclass
 class AudioSegment:
     name: str
@@ -39,6 +59,22 @@ class PackInfo:
     name: str
     path: str
     config: Dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def version(self) -> str:
+        return str(self.config.get("version", "1.0.0"))
+
+    @property
+    def city(self) -> str:
+        return str(self.config.get("city", ""))
+
+    @property
+    def system_type(self) -> str:
+        return str(self.config.get("system_type", ""))
+
+    @property
+    def description(self) -> str:
+        return str(self.config.get("description", ""))
 
 
 class PackManager:
@@ -133,6 +169,65 @@ class PackManager:
             self.intro_items = []
             self._files = {}
 
+    def inspect_zip_pack(self, zip_path: str) -> Tuple[bool, Dict[str, Any]]:
+        """预读 zip 包中的 pack.json，检查元数据并与已安装包对比版本"""
+        if not os.path.isfile(zip_path):
+            return False, {"error": _("Specified ZIP file does not exist")}
+
+        if not zipfile.is_zipfile(zip_path):
+            return False, {"error": _("Selected file is not a valid ZIP archive (packs must be .zip format)")}
+
+        try:
+            with zipfile.ZipFile(zip_path, "r") as z:
+                names = z.namelist()
+                pack_json_candidates = [
+                    n for n in names
+                    if os.path.basename(n).lower() == "pack.json" and not n.startswith("__MACOSX")
+                ]
+                if not pack_json_candidates:
+                    return False, {"error": _("No pack.json found inside the archive, cannot recognize as a NextStop pack")}
+
+                pack_json_candidates.sort(key=lambda s: s.count("/"))
+                target_json = pack_json_candidates[0]
+
+                raw_data = z.read(target_json)
+                try:
+                    cfg = json.loads(raw_data.decode("utf-8"))
+                except Exception as e:
+                    return False, {"error": _("Failed to parse pack.json: {e}").format(e=e)}
+
+                pack_name = cfg.get("name", "")
+                pack_id = cfg.get("id", "")
+                if not pack_id:
+                    parent_dir = os.path.dirname(target_json)
+                    if parent_dir:
+                        pack_id = os.path.basename(parent_dir)
+                    else:
+                        pack_id = os.path.splitext(os.path.basename(zip_path))[0]
+
+                pack_id = re.sub(r"[^\w\-.]", "_", pack_id).strip("_") or "imported_pack"
+                new_version = str(cfg.get("version", "1.0.0"))
+
+                existing = next((p for p in self.available_packs if p.id == pack_id), None)
+                if existing:
+                    old_version = existing.version
+                    cmp_res = compare_versions(new_version, old_version)
+                else:
+                    old_version = ""
+                    cmp_res = None
+
+                return True, {
+                    "id": pack_id,
+                    "name": pack_name or pack_id,
+                    "version": new_version,
+                    "existing": existing,
+                    "existing_version": old_version,
+                    "cmp": cmp_res,
+                    "config": cfg,
+                }
+        except Exception as e:
+            return False, {"error": _("Failed to inspect zip archive: {e}").format(e=e)}
+
     def import_zip_pack(self, zip_path: str) -> Tuple[bool, str, str]:
         """从 ZIP 压缩包导入语音包至用户数据目录
 
@@ -175,6 +270,10 @@ class PackManager:
                         pack_id = os.path.splitext(os.path.basename(zip_path))[0]
 
                 pack_id = re.sub(r"[^\w\-.]", "_", pack_id).strip("_") or "imported_pack"
+                new_version = str(cfg.get("version", "1.0.0"))
+
+                existing = next((p for p in self.available_packs if p.id == pack_id), None)
+                is_update = existing is not None
 
                 prefix = os.path.dirname(target_json)
                 if prefix and not prefix.endswith("/"):
@@ -216,6 +315,10 @@ class PackManager:
             self.discover_packs()
             self.load_pack(pack_id)
             display_name = pack_name or pack_id
+            if is_update:
+                return True, pack_id, _("Successfully updated announcement pack: {name} (v{version})").format(
+                    name=display_name, version=new_version
+                )
             return True, pack_id, _("Successfully imported announcement pack: {name}").format(name=display_name)
 
         except Exception as e:
