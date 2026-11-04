@@ -38,6 +38,7 @@ class NextstopWindow(Adw.ApplicationWindow):
     depart_intro_clear_btn = Gtk.Template.Child()
     depart_intro_dropdown = Gtk.Template.Child()
     depart_transfer_expander = Gtk.Template.Child()
+    depart_ad_row = Gtk.Template.Child()
 
     # 进站 / 到站
     arrive_group = Gtk.Template.Child()
@@ -206,6 +207,7 @@ class NextstopWindow(Adw.ApplicationWindow):
         self.arrive_chime_row.set_model(Gtk.StringList.new(self.pack_manager.chimes))
         self.arrive_chime_row.set_selected(0)
 
+        self.depart_ad_row.set_model(Gtk.StringList.new(self.pack_manager.ads))
         self.arrive_ad_row.set_model(Gtk.StringList.new(self.pack_manager.ads))
 
         lines = self.pack_manager.lines or []
@@ -658,9 +660,10 @@ class NextstopWindow(Adw.ApplicationWindow):
                 return
 
         selected_transfers = [line for line, row in self._transfer_switch_widgets.items() if row.get_active()]
+        ad = self._get_row_selected_text(self.depart_ad_row)
         segments = self.pack_manager.execute_pipeline(
             pipeline_name="depart",
-            slots={"station": st, "transfer": selected_transfers, "intro": intro},
+            slots={"station": st, "transfer": selected_transfers, "intro": intro, "ad": ad},
             switch_states=self._collect_switch_states(),
         )
         if not segments:

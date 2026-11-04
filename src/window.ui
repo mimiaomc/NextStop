@@ -114,6 +114,11 @@
                                         <property name="subtitle" translatable="yes">No transfer</property>
                                       </object>
                                     </child>
+                                    <child>
+                                      <object class="AdwComboRow" id="depart_ad_row">
+                                        <property name="title" translatable="yes">Commercial Ad</property>
+                                      </object>
+                                    </child>
                                   </object>
                                 </child>
 
